@@ -1,0 +1,46 @@
+{
+  "preset_id": "beta_compare_ohmic_beta1p5_j5",
+  "figure_id": "F05_fig6beta=1.5new",
+  "paper_figure_number": 8,
+  "family": "beta_compare_ohmic",
+  "label": "Beta comparison (beta=1.5, J=5)",
+  "paper_asset": "fig6beta=1.5new.eps",
+  "observable": "jx",
+  "solver_id": "beta_compare/beta1.5_J5",
+  "execution_profile": "advanced",
+  "supports_exact": false,
+  "supports_rerun": true,
+  "parameters": {
+    "N": 10,
+    "J": 5.0,
+    "epsilon_0": 4.0,
+    "epsilon": 2.5,
+    "Delta": 0.5,
+    "Delta_0": 0.5,
+    "beta": 1.5,
+    "G": 0.05,
+    "omega_c": 5.0
+  },
+  "plot": {
+    "x_range": [
+      0.0,
+      5.0
+    ],
+    "y_range": [
+      -1.0,
+      1.0
+    ],
+    "plot_divisor": 1.0
+  },
+  "aliases": [
+    "F05_fig6beta=1.5new",
+    "fig6beta=1.5new"
+  ],
+  "paths": {
+    "asset_dir": "figures/beta_compare_ohmic_beta1p5_j5",
+    "inputs_dir": "figures/beta_compare_ohmic_beta1p5_j5/inputs",
+    "tables_dir": "figures/beta_compare_ohmic_beta1p5_j5/tables",
+    "published_dir": "figures/beta_compare_ohmic_beta1p5_j5/published",
+    "rendered_dir": "figures/beta_compare_ohmic_beta1p5_j5/rendered"
+  }
+}

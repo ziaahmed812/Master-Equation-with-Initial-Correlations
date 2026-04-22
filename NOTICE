@@ -1,0 +1,12 @@
+This repository contains new Python packaging, API, plotting, and orchestration code created during the public-release preparation of the project.
+
+It also packages curated legacy scientific inputs and legacy Fortran solver sources that are preserved for reproducibility and provenance.
+
+Bundled legacy materials are included as part of the research software record associated with:
+
+Ali Raza Mirza, Muhammad Zia, and Adam Zaman Chaudhry,
+"A master equation incorporating the system-environment correlations present in the joint equilibrium state",
+arXiv:2012.14853
+https://arxiv.org/abs/2012.14853
+
+The MIT license in this repository applies to the new package code unless a bundled file or upstream provenance note says otherwise.

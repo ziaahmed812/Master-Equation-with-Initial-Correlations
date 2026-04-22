@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "master-equation-with-initial-correlations"
+version = "0.1.0"
+description = "Reusable implementation framework for master-equation workflows with initial system-environment correlations."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  {name = "Ali Raza Mirza"},
+  {name = "Muhammad Zia"},
+  {name = "Adam Zaman Chaudhry"},
+]
+keywords = ["master equation", "open quantum systems", "initial correlations", "scientific computing", "fortran"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Fortran",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "matplotlib>=3.8",
+  "numpy>=1.24",
+  "scipy>=1.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/ziaahmed812/Master-Equation-with-Initial-Correlations"
+Repository = "https://github.com/ziaahmed812/Master-Equation-with-Initial-Correlations"
+Issues = "https://github.com/ziaahmed812/Master-Equation-with-Initial-Correlations/issues"
+Paper = "https://arxiv.org/abs/2012.14853"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+]
+
+[project.scripts]
+meic = "master_equation_initial_correlations.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+master_equation_initial_correlations = [
+  "_assets/figure_manifest.json",
+  "_assets/figures/**/*.json",
+  "_assets/figures/**/*.dat",
+  "_assets/figures/**/*.DAT",
+  "_assets/figures/**/*.eps",
+  "_assets/figures/**/*.png",
+  "_assets/solvers/**/*.f",
+  "_assets/solvers/**/*.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "light_rerun: tests that compile and run lightweight legacy solver presets",
+]

@@ -1,0 +1,46 @@
+{
+  "preset_id": "pure_dephasing_ohmic_j5",
+  "figure_id": "F08_Puredephasing-N=10-unitary",
+  "paper_figure_number": 3,
+  "family": "pure_dephasing_ohmic",
+  "label": "Pure dephasing benchmark (J=5)",
+  "paper_asset": "Puredephasing-N=10-unitary.eps",
+  "observable": "jx",
+  "solver_id": "pure_dephasing/J5",
+  "execution_profile": "heavy",
+  "supports_exact": true,
+  "supports_rerun": true,
+  "parameters": {
+    "N": 10,
+    "J": 5.0,
+    "epsilon_0": 4.0,
+    "epsilon": 4.0,
+    "Delta": 0.0,
+    "Delta_0": 0.0,
+    "beta": 1.0,
+    "G": 0.05,
+    "omega_c": 5.0
+  },
+  "plot": {
+    "x_range": [
+      0.0,
+      4.0
+    ],
+    "y_range": [
+      -1.0,
+      1.0
+    ],
+    "plot_divisor": 1.0
+  },
+  "aliases": [
+    "F08_Puredephasing-N=10-unitary",
+    "Puredephasing-N=10-unitary"
+  ],
+  "paths": {
+    "asset_dir": "figures/pure_dephasing_ohmic_j5",
+    "inputs_dir": "figures/pure_dephasing_ohmic_j5/inputs",
+    "tables_dir": "figures/pure_dephasing_ohmic_j5/tables",
+    "published_dir": "figures/pure_dephasing_ohmic_j5/published",
+    "rendered_dir": "figures/pure_dephasing_ohmic_j5/rendered"
+  }
+}

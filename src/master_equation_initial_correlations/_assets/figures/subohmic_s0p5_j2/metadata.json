@@ -1,0 +1,47 @@
+{
+  "preset_id": "subohmic_s0p5_j2",
+  "figure_id": "F13_subOhmic-S=0.5,J=2",
+  "paper_figure_number": 11,
+  "family": "subohmic_s0p5",
+  "label": "Sub-Ohmic spin environment (J=2)",
+  "paper_asset": "subOhmic-S=0.5,J=2.eps",
+  "observable": "jx",
+  "solver_id": "subohmic/J2",
+  "execution_profile": "light",
+  "supports_exact": false,
+  "supports_rerun": true,
+  "parameters": {
+    "N": 4,
+    "J": 2.0,
+    "epsilon_0": 4.0,
+    "epsilon": 2.5,
+    "Delta": 0.5,
+    "Delta_0": 0.5,
+    "beta": 1.0,
+    "G": 0.05,
+    "omega_c": 5.0,
+    "s": 0.5
+  },
+  "plot": {
+    "x_range": [
+      0.0,
+      5.0
+    ],
+    "y_range": [
+      -1.0,
+      1.0
+    ],
+    "plot_divisor": 1.0
+  },
+  "aliases": [
+    "F13_subOhmic-S=0.5,J=2",
+    "subOhmic-S=0.5,J=2"
+  ],
+  "paths": {
+    "asset_dir": "figures/subohmic_s0p5_j2",
+    "inputs_dir": "figures/subohmic_s0p5_j2/inputs",
+    "tables_dir": "figures/subohmic_s0p5_j2/tables",
+    "published_dir": "figures/subohmic_s0p5_j2/published",
+    "rendered_dir": "figures/subohmic_s0p5_j2/rendered"
+  }
+}

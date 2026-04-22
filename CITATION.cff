@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper. A BibTeX entry is provided in CITATION.bib."
+title: "Master-Equation-with-Initial-Correlations"
+type: software
+repository-code: "https://github.com/ziaahmed812/Master-Equation-with-Initial-Correlations"
+license: "MIT"
+authors:
+  - family-names: "Mirza"
+    given-names: "Ali Raza"
+  - family-names: "Zia"
+    given-names: "Muhammad"
+  - family-names: "Chaudhry"
+    given-names: "Adam Zaman"
+references:
+  - type: article
+    title: "A master equation incorporating the system-environment correlations present in the joint equilibrium state"
+    authors:
+      - family-names: "Mirza"
+        given-names: "Ali Raza"
+      - family-names: "Zia"
+        given-names: "Muhammad"
+      - family-names: "Chaudhry"
+        given-names: "Adam Zaman"
+    journal: "arXiv"
+    year: 2020
+    identifier: "arXiv:2012.14853"
+    url: "https://arxiv.org/abs/2012.14853"

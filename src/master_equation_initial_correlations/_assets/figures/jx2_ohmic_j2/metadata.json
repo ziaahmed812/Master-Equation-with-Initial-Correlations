@@ -1,0 +1,46 @@
+{
+  "preset_id": "jx2_ohmic_j2",
+  "figure_id": "F07_Jx_2-plot-for-N=4",
+  "paper_figure_number": 9,
+  "family": "jx2_ohmic",
+  "label": "Second-moment Jx benchmark (J=2)",
+  "paper_asset": "Jx_2-plot-for-N=4.eps",
+  "observable": "jx2",
+  "solver_id": "jx2/J2",
+  "execution_profile": "light",
+  "supports_exact": false,
+  "supports_rerun": true,
+  "parameters": {
+    "N": 4,
+    "J": 2.0,
+    "epsilon_0": 4.0,
+    "epsilon": 3.5,
+    "Delta": 0.5,
+    "Delta_0": 0.5,
+    "beta": 1.0,
+    "G": 0.05,
+    "omega_c": 5.0
+  },
+  "plot": {
+    "x_range": [
+      0.0,
+      2.0
+    ],
+    "y_range": [
+      0.0,
+      1.0
+    ],
+    "plot_divisor": 4.0
+  },
+  "aliases": [
+    "F07_Jx_2-plot-for-N=4",
+    "Jx_2-plot-for-N=4"
+  ],
+  "paths": {
+    "asset_dir": "figures/jx2_ohmic_j2",
+    "inputs_dir": "figures/jx2_ohmic_j2/inputs",
+    "tables_dir": "figures/jx2_ohmic_j2/tables",
+    "published_dir": "figures/jx2_ohmic_j2/published",
+    "rendered_dir": "figures/jx2_ohmic_j2/rendered"
+  }
+}
