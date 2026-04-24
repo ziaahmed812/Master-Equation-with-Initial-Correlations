@@ -100,15 +100,13 @@ def test_user_supplied_initial_state_is_written_as_complex_fortran_input(tmp_pat
     )
     numerics = QuadratureConfig(
         omega_nodes=8,
+        omega_max=20.0,
         lambda_nodes=4,
-        instate_omega_nodes=4,
-        instate_lambda_nodes=3,
-        instate_zeta_nodes=3,
-        omega_max_coefficients=20.0,
-        omega_max_tau=20.0,
-        omega_max_instate=20.0,
-        coefficient_points=5,
-        tau_points=5,
+        initial_state_omega_nodes=4,
+        initial_state_lambda_nodes=3,
+        initial_state_zeta_nodes=3,
+        coefficient_time_step=1.25,
+        correlation_tau_step=1.25,
     )
     generated = generate_inputs(params, numerics)
     assert generated.initial_state_source == "user_supplied"
@@ -117,7 +115,7 @@ def test_user_supplied_initial_state_is_written_as_complex_fortran_input(tmp_pat
 
 
 def test_custom_tau_grid_is_explicitly_configurable() -> None:
-    numerics = QuadratureConfig(tau_points=11, tau_t_max=2.0, fortran_t_final=2.0)
+    numerics = QuadratureConfig(correlation_tau_step=0.2, correlation_tau_max=2.0, fortran_t_final=2.0)
     times = tau_times(numerics)
     assert len(times) == 11
     assert times[-1] == 2.0

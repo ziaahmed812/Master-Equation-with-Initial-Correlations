@@ -36,7 +36,7 @@ def _validate_tlist(tlist: Any) -> tuple[np.ndarray, float, float]:
     if not np.all(np.isfinite(times)):
         raise ValueError("tlist must contain only finite values.")
     if abs(times[0]) > 1.0e-12:
-        raise ValueError("tlist must start at 0.0 for the preserved master-equation solver.")
+        raise ValueError("tlist must start at 0.0 for the Fortran-backed master-equation solver.")
     steps = np.diff(times)
     if np.any(steps <= 0):
         raise ValueError("tlist must be strictly increasing.")
@@ -48,14 +48,14 @@ def _validate_tlist(tlist: Any) -> tuple[np.ndarray, float, float]:
 
 def _numerics_from_tlist(numerics: NumericsConfig | None, *, dt: float, t_final: float) -> NumericsConfig:
     base = validate_numerics(numerics)
-    # The preserved Fortran loop writes while T < TFINAL, so use one internal
+    # The Fortran loop writes while T < TFINAL, so use one internal
     # sentinel step beyond the requested public endpoint.
     internal_t_final = t_final + dt
     return validate_numerics(
         replace(
             base,
             coefficient_t_max=internal_t_final + 1.0e-14,
-            tau_t_max=internal_t_final + 1.0e-14,
+            correlation_tau_max=internal_t_final + 1.0e-14,
             fortran_dt=dt,
             fortran_t_final=internal_t_final,
         )
@@ -106,7 +106,7 @@ def _read_expectation_table(path: Path, times: np.ndarray) -> tuple[np.ndarray, 
 
 def _simulation_params(
     *,
-    bath_family: str,
+    bath_type: str,
     model: str,
     system: SystemParams,
     bath: BathParams,
@@ -114,10 +114,9 @@ def _simulation_params(
     initial_state: np.ndarray | None,
 ) -> SimulationParams:
     return simulation_params_from_public(
-        bath_family=bath_family,
         model=model,
         system=system,
-        bath=bath,
+        bath=replace(bath, bath_type=bath_type),
         observable=observable,
         initial_state=initial_state,
     )
@@ -165,7 +164,7 @@ def _exact_states_for_branch(times: np.ndarray, params: PureDephasingParams, bra
 @dataclass(frozen=True)
 class _BasePureDephasingBranchSolver:
     system: SystemParams
-    bath: BathParams = field(default_factory=lambda: BathParams(kind="ohmic", s=1.0))
+    bath: BathParams = field(default_factory=lambda: BathParams(bath_type="bosonic", kind="ohmic", s=1.0))
     observable: str | np.ndarray = "jx"
     branch: ClassVar[Branch] = "with_correlations"
 
@@ -213,13 +212,13 @@ class PureDephasingSolverWOC(_BasePureDephasingBranchSolver):
 @dataclass(frozen=True)
 class _BaseFortranBranchSolver:
     system: SystemParams
-    bath: BathParams = field(default_factory=lambda: BathParams(kind="ohmic", s=1.0))
+    bath: BathParams = field(default_factory=lambda: BathParams(bath_type="bosonic", kind="ohmic", s=1.0))
     observable: str | np.ndarray = "jx"
     initial_state: np.ndarray | None = None
     numerics: NumericsConfig | None = None
 
     branch: ClassVar[Branch] = "with_correlations"
-    bath_family: ClassVar[str] = "bosonic"
+    bath_type: ClassVar[str] = "bosonic"
     model: ClassVar[str] = "spin-boson"
 
     def run(
@@ -239,7 +238,7 @@ class _BaseFortranBranchSolver:
         temporary_directories: list[tempfile.TemporaryDirectory[str]] = []
         raw_times: np.ndarray | None = None
         system = validate_system_params(self.system)
-        bath = validate_bath_params(self.bath, family=self.bath_family)
+        bath = validate_bath_params(self.bath, bath_type=self.bath_type)
         validate_model_compatibility(system=system, bath=bath, model=self.model)
 
         for observable, label in zip(observables, labels):
@@ -248,7 +247,7 @@ class _BaseFortranBranchSolver:
             temporary_directories.append(tmp)
             output_dir = Path(tmp.name) / label
             params = _simulation_params(
-                bath_family=self.bath_family,
+                bath_type=self.bath_type,
                 model=self.model,
                 system=self.system,
                 bath=self.bath,
@@ -278,7 +277,7 @@ class _BaseFortranBranchSolver:
 
         e_data = {label: expect[index] for label, index in label_index.items()}
         params = _simulation_params(
-            bath_family=self.bath_family,
+            bath_type=self.bath_type,
             model=self.model,
             system=self.system,
             bath=self.bath,
@@ -303,7 +302,7 @@ class _BaseFortranBranchSolver:
                 "observables": labels,
                 "observable_parameters": [
                     _simulation_params(
-                        bath_family=self.bath_family,
+                        bath_type=self.bath_type,
                         model=self.model,
                         system=self.system,
                         bath=self.bath,
@@ -319,28 +318,28 @@ class _BaseFortranBranchSolver:
 @dataclass(frozen=True)
 class BosonicBathSolverWC(_BaseFortranBranchSolver):
     branch: ClassVar[Branch] = "with_correlations"
-    bath_family: ClassVar[str] = "bosonic"
+    bath_type: ClassVar[str] = "bosonic"
     model: ClassVar[str] = "spin-boson"
 
 
 @dataclass(frozen=True)
 class BosonicBathSolverWOC(_BaseFortranBranchSolver):
     branch: ClassVar[Branch] = "without_correlations"
-    bath_family: ClassVar[str] = "bosonic"
+    bath_type: ClassVar[str] = "bosonic"
     model: ClassVar[str] = "spin-boson"
 
 
 @dataclass(frozen=True)
 class SpinBathSolverWC(_BaseFortranBranchSolver):
     branch: ClassVar[Branch] = "with_correlations"
-    bath_family: ClassVar[str] = "spin"
+    bath_type: ClassVar[str] = "spin"
     model: ClassVar[str] = "spin-environment"
 
 
 @dataclass(frozen=True)
 class SpinBathSolverWOC(_BaseFortranBranchSolver):
     branch: ClassVar[Branch] = "without_correlations"
-    bath_family: ClassVar[str] = "spin"
+    bath_type: ClassVar[str] = "spin"
     model: ClassVar[str] = "spin-environment"
 
 
@@ -351,7 +350,6 @@ def solve(
     tlist: Any,
     e_ops: Any = None,
     correlations: str = "with",
-    bath_family: str | None = None,
     model: str = "auto",
     numerics: NumericsConfig | None = None,
     initial_state: np.ndarray | None = None,
@@ -365,19 +363,19 @@ def solve(
 
     if not isinstance(bath, BathParams):
         raise TypeError("solve(system, bath, ...) requires bath to be a BathParams instance.")
-    normalized_bath = validate_bath_params(bath, family=bath_family)
+    normalized_bath = validate_bath_params(bath)
     normalized_correlations = normalize_correlations(correlations)
-    normalized_model = "spin-environment" if normalized_bath.family == "spin" else "spin-boson"
+    normalized_model = "spin-environment" if normalized_bath.bath_type == "spin" else "spin-boson"
     model_token = "auto" if model is None else model.strip().lower().replace("_", "-")
     if model_token != "auto":
         requested_model = model_token
         if requested_model != normalized_model:
             raise ValueError(
-                f"meic.solve uses model={normalized_model!r} for bath family {normalized_bath.family!r}; "
+                f"meic.solve uses model={normalized_model!r} for bath_type={normalized_bath.bath_type!r}; "
                 "use meic.exact.solve(...) for the analytical pure-dephasing solver."
             )
     solver_cls: type[_BaseFortranBranchSolver]
-    if normalized_bath.family == "spin":
+    if normalized_bath.bath_type == "spin":
         solver_cls = SpinBathSolverWC if normalized_correlations == "with_correlations" else SpinBathSolverWOC
     else:
         solver_cls = BosonicBathSolverWC if normalized_correlations == "with_correlations" else BosonicBathSolverWOC

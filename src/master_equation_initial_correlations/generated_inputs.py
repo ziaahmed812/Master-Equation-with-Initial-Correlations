@@ -39,17 +39,18 @@ def validate_numerics(numerics: NumericsConfig | None) -> NumericsConfig:
     for name in (
         "omega_nodes",
         "lambda_nodes",
-        "instate_omega_nodes",
-        "instate_lambda_nodes",
-        "instate_zeta_nodes",
-        "coefficient_points",
-        "tau_points",
+        "initial_state_omega_nodes",
+        "initial_state_lambda_nodes",
+        "initial_state_zeta_nodes",
     ):
         _positive_int(getattr(config, name), name)
+    for name in ("coefficient_time_step", "correlation_tau_step"):
+        if getattr(config, name) <= 0:
+            raise ValueError(f"{name} must be positive.")
     if config.coefficient_points < 2:
-        raise ValueError("coefficient_points must be at least 2.")
+        raise ValueError("coefficient_time_step must produce at least two coefficient grid points.")
     if config.tau_points < 2:
-        raise ValueError("tau_points must be at least 2.")
+        raise ValueError("correlation_tau_step must produce at least two correlation grid points.")
     for lower, upper, label in (
         (config.omega_min_coefficients, config.omega_max_coefficients, "coefficient omega grid"),
         (config.omega_min_tau, config.omega_max_tau, "tau omega grid"),
@@ -64,8 +65,8 @@ def validate_numerics(numerics: NumericsConfig | None) -> NumericsConfig:
             raise ValueError(f"{name} must be positive.")
     if config.coefficient_t_max + 1.0e-12 < config.fortran_t_final:
         raise ValueError("coefficient_t_max must be at least fortran_t_final.")
-    if config.tau_t_max + 1.0e-12 < config.fortran_t_final:
-        raise ValueError("tau_t_max must be at least fortran_t_final.")
+    if config.correlation_tau_max + 1.0e-12 < config.fortran_t_final:
+        raise ValueError("correlation_tau_max must be at least fortran_t_final.")
     return config
 
 
@@ -92,19 +93,22 @@ def tau_index_step(numerics: NumericsConfig | None = None) -> float:
 def numerics_summary(numerics: NumericsConfig | None = None) -> dict[str, float | int]:
     config = validate_numerics(numerics)
     return {
+        "omega_max": config.omega_max,
         "omega_nodes": config.omega_nodes,
         "lambda_nodes": config.lambda_nodes,
-        "instate_omega_nodes": config.instate_omega_nodes,
-        "instate_lambda_nodes": config.instate_lambda_nodes,
-        "instate_zeta_nodes": config.instate_zeta_nodes,
-        "omega_max_coefficients": config.omega_max_coefficients,
-        "omega_max_tau": config.omega_max_tau,
-        "omega_max_instate": config.omega_max_instate,
-        "coefficient_points": config.coefficient_points,
+        "initial_state_omega_nodes": config.initial_state_omega_nodes,
+        "initial_state_lambda_nodes": config.initial_state_lambda_nodes,
+        "initial_state_zeta_nodes": config.initial_state_zeta_nodes,
+        "coefficient_omega_max": config.coefficient_omega_max,
+        "correlation_omega_max": config.correlation_omega_max,
+        "initial_state_omega_max": config.initial_state_omega_max,
+        "coefficient_time_step": config.coefficient_time_step,
         "coefficient_t_max": config.coefficient_t_max,
+        "coefficient_points": config.coefficient_points,
         "coefficient_index_step": coefficient_index_step(config),
-        "tau_points": config.tau_points,
-        "tau_t_max": config.tau_t_max,
+        "correlation_tau_step": config.correlation_tau_step,
+        "correlation_tau_max": config.correlation_tau_max,
+        "correlation_tau_points": config.tau_points,
         "tau_index_step": tau_index_step(config),
         "fortran_dtau": config.fortran_dtau,
         "fortran_dt": config.fortran_dt,

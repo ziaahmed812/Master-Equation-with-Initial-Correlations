@@ -24,7 +24,7 @@ pip install -e .[dev]
 ```
 
 The exact pure-dephasing solver is Python-only. The master-equation solver uses
-preserved Fortran kernels under the hood and needs `gfortran` plus BLAS/LAPACK:
+a Fortran numerical backend and needs `gfortran` plus BLAS/LAPACK:
 
 ```bash
 meic doctor
@@ -45,7 +45,7 @@ system = meic.SystemParams(
 )
 
 bath = meic.BathParams(
-    family="bosonic",
+    bath_type="bosonic",
     kind="ohmic",
     s=1.0,
     beta=1.0,
@@ -64,10 +64,10 @@ wc_result.expect[0]
 wc_result.e_data["jx"]
 ```
 
-Use `family="spin"` for a spin bath:
+Use `bath_type="spin"` for a spin bath:
 
 ```python
-spin_bath = meic.BathParams(family="spin", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+spin_bath = meic.BathParams(bath_type="spin", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
 spin_result = meic.solve(system, spin_bath, tlist=tlist, e_ops=["jx"], correlations="with")
 ```
 
@@ -78,7 +78,7 @@ confused with the master-equation workflow:
 
 ```python
 system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-bath = meic.BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
 tlist = np.linspace(0.0, 5.0, 501)
 
 exact_wc = meic.exact.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="with")
@@ -90,10 +90,10 @@ This exact solver is valid for bosonic Ohmic pure dephasing with
 
 ## Bath And Spectrum
 
-`BathParams.family` chooses the bath:
+`BathParams.bath_type` chooses the bath:
 
-- `family="bosonic"` for the bosonic bath master-equation workflow.
-- `family="spin"` for the spin-bath master-equation workflow.
+- `bath_type="bosonic"` for the bosonic bath master-equation workflow.
+- `bath_type="spin"` for the spin-bath master-equation workflow.
 
 `BathParams.kind` chooses the spectrum:
 
@@ -126,8 +126,8 @@ The expression `jx^2` uses the paper normalization `4 <J_x^2> / N^2`.
 Non-Hermitian observables are allowed, but the solver warns because complex
 expectation values may appear.
 
-For Fortran-backed master-equation runs, each observable currently triggers its
-own preserved-kernel run. This is deliberately explicit and correct, but
+For Fortran-backed master-equation runs, each observable currently triggers a
+separate numerical run. This keeps each observable evaluation explicit, but
 multi-observable calls can take longer than single-observable calls.
 
 ## Results And Export
@@ -156,25 +156,33 @@ fails loudly rather than silently writing an incomplete folder.
 
 ## Numerics
 
-The defaults reproduce the paper-scale workflows. Away from those parameter
-sets, make numerical controls explicit and check convergence:
+You can omit `numerics`; the package then uses the benchmark grid settings.
+Only change these controls when you want to check convergence or run outside
+the benchmark regime.
+
+The main controls are the bath-integral grids:
 
 ```python
 numerics = meic.NumericsConfig(
-    omega_nodes=800,
-    omega_max_coefficients=800.0,
-    omega_max_tau=820.0,
-    coefficient_points=4001,
-    tau_points=4001,
+    omega_max=800.0,              # frequency cutoff in the omega integrals
+    omega_nodes=800,              # quadrature nodes for omega
+    coefficient_time_step=0.00125, # spacing for A.dat, B.dat, C.dat
+    correlation_tau_step=0.00125,  # spacing for bath-correlation tau tables
 )
 
 result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], numerics=numerics)
 ```
 
+For ordinary `meic.solve(...)` calls, `tlist` sets the requested physical time
+window. `NumericsConfig` controls how finely the coefficient and bath
+correlation tables are generated inside that window. Advanced users can also
+set separate cutoffs such as `correlation_omega_max`,
+`initial_state_omega_max`, or initial-state quadrature nodes.
+
 Fortran-backed solvers currently require a one-dimensional, strictly
-increasing, uniformly spaced `tlist` starting at `0.0`. The preserved Fortran
-tables start at a tiny positive time internally; `result.times` records the
-actual returned solver times.
+increasing, uniformly spaced `tlist` starting at `0.0`. The first returned
+Fortran time is a tiny positive value (`1e-11`), and `result.times` records the
+solver output without relabeling it.
 
 ## Examples And Paper Parameters
 

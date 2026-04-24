@@ -18,18 +18,31 @@ system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5
 `N` is the public spin-size parameter; internally `J = N / 2`.
 
 ```python
-bath = meic.BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
-bath = meic.BathParams(family="bosonic", kind="subohmic", s=0.5, beta=1.0, coupling=0.05, omega_c=5.0)
-bath = meic.BathParams(family="spin", kind="superohmic", s=3.0, beta=1.0, coupling=0.05, omega_c=5.0)
+bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+bath = meic.BathParams(bath_type="bosonic", kind="subohmic", s=0.5, beta=1.0, coupling=0.05, omega_c=5.0)
+bath = meic.BathParams(bath_type="spin", kind="superohmic", s=3.0, beta=1.0, coupling=0.05, omega_c=5.0)
 ```
 
-`family` is either `"bosonic"` or `"spin"`. `kind` is `"ohmic"`,
+`bath_type` is either `"bosonic"` or `"spin"`. `kind` is `"ohmic"`,
 `"subohmic"`, or `"superohmic"`. Ohmic spectra use `s=1.0`; sub-Ohmic spectra
 require `0 < s < 1`; super-Ohmic spectra require `s > 1`.
 
-`NumericsConfig` controls quadrature nodes, cutoffs, coefficient grids, and
-preserved-Fortran integration controls. The basic time step and endpoint come
-from `tlist`.
+`NumericsConfig` controls the bath-integral grids used to generate coefficient
+and correlation tables:
+
+```python
+numerics = meic.NumericsConfig(
+    omega_max=800.0,
+    omega_nodes=800,
+    coefficient_time_step=0.00125,
+    correlation_tau_step=0.00125,
+)
+```
+
+`omega_max` and `omega_nodes` control the frequency quadrature. The coefficient
+time step controls the `A.dat`, `B.dat`, and `C.dat` tables. The correlation
+tau step controls the bath-correlation table used by the Fortran backend. In
+normal `meic.solve(...)` calls, the maximum time comes from `tlist`.
 
 ## Master-Equation Solver
 
@@ -44,8 +57,8 @@ result = meic.solve(
 )
 ```
 
-`correlations` accepts `"with"`, `"wc"`, `"without"`, or `"woc"`. The bath
-family determines the physical backend: bosonic bath uses the spin-boson
+`correlations` accepts `"with"`, `"wc"`, `"without"`, or `"woc"`. The
+`bath_type` determines the physical backend: bosonic bath uses the spin-boson
 master-equation workflow, and spin bath uses the spin-environment workflow.
 
 Fortran-backed runs require a one-dimensional, strictly increasing, uniformly
@@ -107,9 +120,9 @@ e_ops = [meic.jx(system), meic.jz(system)]
 observables are allowed and produce a warning because complex expectation
 values may be expected.
 
-For Fortran-backed master-equation runs, each observable currently triggers an
-independent preserved-kernel run. This keeps the physics path explicit, but
-multi-observable calls are more expensive than single-observable calls.
+For Fortran-backed master-equation runs, each observable currently triggers a
+separate numerical run. Multi-observable calls are therefore more expensive
+than single-observable calls.
 
 ## Initial States
 
@@ -120,8 +133,5 @@ validated density matrix through `initial_state=` in `meic.solve(...)`.
 The exact pure-dephasing solver uses its analytical correlated or uncorrelated
 construction and does not accept a custom initial state.
 
-## Reference Utilities
-
-The package includes lower-level reference-data and legacy-compatible utilities
-for provenance and validation. Ordinary notebook use should start with
-`meic.solve(...)` or `meic.exact.solve(...)`.
+Ordinary notebook use should start with `meic.solve(...)` for master-equation
+runs or `meic.exact.solve(...)` for analytical pure dephasing.

@@ -19,15 +19,15 @@ from master_equation_initial_correlations.simulation import run_simulation
 
 FAST_NUMERICS = NumericsConfig(
     omega_nodes=24,
+    omega_max=60.0,
     lambda_nodes=8,
-    instate_omega_nodes=12,
-    instate_lambda_nodes=6,
-    instate_zeta_nodes=6,
-    omega_max_coefficients=60.0,
-    omega_max_tau=60.0,
-    omega_max_instate=60.0,
-    coefficient_points=41,
-    tau_points=41,
+    initial_state_omega_nodes=12,
+    initial_state_lambda_nodes=6,
+    initial_state_zeta_nodes=6,
+    coefficient_time_step=0.00125,
+    correlation_tau_step=0.00125,
+    coefficient_t_max=0.05,
+    correlation_tau_max=0.05,
     fortran_t_final=0.05,
 )
 
@@ -175,7 +175,7 @@ def test_exact_output_has_headers_and_overwrite_protection(tmp_path: Path) -> No
 def test_blackbox_pure_dephasing_is_ram_only_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
     tlist = np.linspace(0.0, 1.0, 6)
 
     wc = meic.exact.solve(system, bath, tlist=tlist, e_ops=["jx", "jz"], correlations="with")
@@ -190,7 +190,7 @@ def test_blackbox_pure_dephasing_is_ram_only_by_default(tmp_path: Path, monkeypa
 
 def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
     result = meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.5, 6), e_ops=["jx", "jz"])
 
     destination = result.save(tmp_path / "saved-result")
@@ -206,18 +206,23 @@ def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
 
 def test_blackbox_tlist_validation() -> None:
     system = SystemParams(N=1, epsilon=4.0)
-    bath = BathParams(family="bosonic", kind="ohmic", s=1.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
     with pytest.raises(ValueError, match="start at 0.0"):
         meic.exact.solve(system, bath, tlist=np.linspace(0.1, 1.0, 5))
     with pytest.raises(ValueError, match="uniformly spaced"):
         meic.exact.solve(system, bath, tlist=np.array([0.0, 0.1, 0.3]))
 
 
+def test_bath_params_are_keyword_only() -> None:
+    with pytest.raises(TypeError):
+        BathParams("ohmic")
+
+
 def test_public_api_does_not_export_internal_solver_classes() -> None:
     assert not hasattr(meic, "BosonicBathSolverWC")
     signature = inspect.signature(BosonicBathSolverWC)
     assert "branch" not in signature.parameters
-    assert "bath_family" not in signature.parameters
+    assert "bath_type" not in signature.parameters
     assert "model" not in signature.parameters
 
 
@@ -229,19 +234,19 @@ def test_blackbox_validation_rejects_bad_spectrum_before_fortran() -> None:
     with pytest.raises(ValueError, match="sub-Ohmic spectra require 0 < s < 1"):
         meic.solve(system, BathParams(kind="subohmic", s=2.0), tlist=tlist, e_ops=["jx"])
     with pytest.raises(ValueError, match="spin-environment"):
-        meic.solve(system, BathParams(family="spin", kind="ohmic", s=1.0), tlist=tlist, e_ops=["jx"], model="spin-boson")
+        meic.solve(system, BathParams(bath_type="spin", kind="ohmic", s=1.0), tlist=tlist, e_ops=["jx"], model="spin-boson")
 
 
 def test_exact_namespace_rejects_non_pure_dephasing() -> None:
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.5, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic", s=1.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
     with pytest.raises(ValueError, match="delta0=0 and delta=0"):
         meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=["jx"])
 
 
 def test_blackbox_nonhermitian_observable_warns() -> None:
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic", s=1.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
     with pytest.warns(RuntimeWarning, match="not Hermitian"):
         meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=["jx*jy"])
 
@@ -277,7 +282,7 @@ def test_blackbox_fortran_solver_returns_arrays_and_saves_artifacts(tmp_path: Pa
         pytest.skip("gfortran not available")
     monkeypatch.chdir(tmp_path)
     system = SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
-    bath = BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
     tlist = np.linspace(0.0, 0.05, 6)
 
     wc = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="with", numerics=FAST_NUMERICS, verbose=False)
@@ -483,7 +488,7 @@ def test_spin_bath_subohmic_jy_with_user_numerics(tmp_path: Path) -> None:
         numerics=FAST_NUMERICS,
     )
     assert result.verification_performed is False
-    assert "tau_points: 41" in (result.output_dir / "bathcorrelation.dat").read_text()
+    assert "correlation_tau_points: 41" in (result.output_dir / "bathcorrelation.dat").read_text()
 
 
 @pytest.mark.solver_rerun

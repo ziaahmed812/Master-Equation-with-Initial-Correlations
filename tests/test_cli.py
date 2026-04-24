@@ -36,7 +36,7 @@ def test_cli_run_exact_pure_dephasing_saves_result(tmp_path: Path, capsys) -> No
 def test_cli_rejects_incompatible_bath_model(capsys) -> None:
     code = main([
         "run",
-        "--bath", "spin",
+        "--bath-type", "spin",
         "--model", "spin-boson",
         "--N", "2",
         "--tmax", "0.1",

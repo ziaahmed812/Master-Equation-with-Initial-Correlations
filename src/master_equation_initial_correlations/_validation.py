@@ -30,8 +30,8 @@ def positive_integer(value: Any, *, name: str) -> int:
     return integer_value
 
 
-def normalize_bath_family(family: str | None) -> str:
-    value = clean_token(family or "bosonic")
+def normalize_bath_type(bath_type: str | None) -> str:
+    value = clean_token(bath_type or "bosonic")
     aliases = {
         "boson": "bosonic",
         "bosonic-bath": "bosonic",
@@ -40,7 +40,7 @@ def normalize_bath_family(family: str | None) -> str:
     }
     value = aliases.get(value, value)
     if value not in {"bosonic", "spin"}:
-        raise ValueError("bath family must be either 'bosonic' or 'spin'.")
+        raise ValueError("bath_type must be either 'bosonic' or 'spin'.")
     return value
 
 
@@ -56,11 +56,11 @@ def normalize_spectral(kind: str) -> str:
     return value
 
 
-def normalize_model(model: str | None, *, bath_family: str, exact: bool = False) -> str:
+def normalize_model(model: str | None, *, bath_type: str, exact: bool = False) -> str:
     if model is None or clean_token(model) == "auto":
         if exact:
             return "pure-dephasing"
-        return "spin-environment" if bath_family == "spin" else "spin-boson"
+        return "spin-environment" if bath_type == "spin" else "spin-boson"
     value = clean_token(model)
     if value not in {"pure-dephasing", "spin-boson", "spin-environment"}:
         raise ValueError("model must be 'pure-dephasing', 'spin-boson', 'spin-environment', or 'auto'.")
@@ -102,8 +102,8 @@ def validate_system_params(system: SystemParams) -> SystemParams:
     )
 
 
-def validate_bath_params(bath: BathParams, *, family: str | None = None) -> BathParams:
-    bath_family = normalize_bath_family(family if family is not None else bath.family)
+def validate_bath_params(bath: BathParams, *, bath_type: str | None = None) -> BathParams:
+    normalized_bath_type = normalize_bath_type(bath_type if bath_type is not None else bath.bath_type)
     spectral = normalize_spectral(bath.kind)
     beta = float(bath.beta)
     coupling = float(bath.coupling)
@@ -119,7 +119,7 @@ def validate_bath_params(bath: BathParams, *, family: str | None = None) -> Bath
         raise ValueError("spectral exponent s must be finite.")
     if spectral == "ohmic":
         if s is not None and not close(s, 1.0):
-            raise ValueError("Ohmic spectra use s=1; omit s or set s=1.0.")
+            raise ValueError("Ohmic spectra use s=1.0.")
         s = 1.0
     elif spectral == "subohmic":
         if s is None:
@@ -132,7 +132,7 @@ def validate_bath_params(bath: BathParams, *, family: str | None = None) -> Bath
         if s <= 1.0:
             raise ValueError("super-Ohmic spectra require s > 1.")
     return BathParams(
-        family=bath_family,
+        bath_type=normalized_bath_type,
         kind=spectral,
         beta=beta,
         coupling=coupling,
@@ -154,11 +154,11 @@ def validate_observable(observable: str | np.ndarray, *, N: int) -> str | np.nda
 
 
 def validate_model_compatibility(*, system: SystemParams, bath: BathParams, model: str, exact: bool = False) -> None:
-    if bath.family == "spin" and model != "spin-environment":
+    if bath.bath_type == "spin" and model != "spin-environment":
         raise ValueError("spin bath runs use model='spin-environment'.")
-    if bath.family == "bosonic" and model == "spin-environment":
-        raise ValueError("spin-environment is a spin-bath model; use bath family 'spin'.")
-    if exact and (bath.family != "bosonic" or model != "pure-dephasing" or bath.kind != "ohmic"):
+    if bath.bath_type == "bosonic" and model == "spin-environment":
+        raise ValueError("spin-environment is a spin-bath model; use bath_type='spin'.")
+    if exact and (bath.bath_type != "bosonic" or model != "pure-dephasing" or bath.kind != "ohmic"):
         raise ValueError("the exact analytical solver is implemented for bosonic Ohmic pure dephasing only.")
     if model == "pure-dephasing":
         if not close(system.delta0, 0.0) or not close(system.delta, 0.0):
@@ -176,17 +176,16 @@ def simulation_params_from_public(
     bath: BathParams,
     observable: str | np.ndarray,
     initial_state: np.ndarray | None = None,
-    bath_family: str | None = None,
     model: str | None = "auto",
     exact: bool = False,
 ) -> SimulationParams:
     normalized_system = validate_system_params(system)
-    normalized_bath = validate_bath_params(bath, family=bath_family)
-    normalized_model = normalize_model(model, bath_family=normalized_bath.family, exact=exact)
+    normalized_bath = validate_bath_params(bath)
+    normalized_model = normalize_model(model, bath_type=normalized_bath.bath_type, exact=exact)
     validate_model_compatibility(system=normalized_system, bath=normalized_bath, model=normalized_model, exact=exact)
     normalized_observable = validate_observable(observable, N=normalized_system.N)
     return SimulationParams(
-        bath=normalized_bath.family,
+        bath=normalized_bath.bath_type,
         model=normalized_model,
         spectral=normalized_bath.kind,
         observable=normalized_observable,
@@ -212,7 +211,7 @@ def normalize_simulation_params(params: SimulationParams) -> SimulationParams:
         delta=params.delta,
     )
     bath = BathParams(
-        family=params.bath,
+        bath_type=params.bath,
         kind=params.spectral,
         beta=params.beta,
         coupling=params.coupling,

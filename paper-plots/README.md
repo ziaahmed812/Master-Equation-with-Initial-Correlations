@@ -10,6 +10,5 @@ scripts intentionally use the same black-box API as ordinary users:
 - call `meic.solve(...)` or `meic.exact.solve(...)` with explicit correlation choice
 - leave plotting and saving to the user
 
-Despite the historical folder name, these scripts do not generate EPS or PNG
-files. They compute arrays in memory so users can inspect, save, or plot them
-however they prefer.
+These scripts do not generate EPS or PNG files. They compute arrays in memory
+so users can inspect, save, or plot them however they prefer.

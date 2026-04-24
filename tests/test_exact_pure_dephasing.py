@@ -24,7 +24,7 @@ def test_exact_public_api_matches_reference_n4() -> None:
     correlated_tlist[0] = 0.0
     uncorrelated_tlist = np.arange(0.0, 5.0, 0.1)
     system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-    bath = meic.BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+    bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
 
     wc = meic.exact.solve(system, bath, tlist=correlated_tlist, e_ops=["jx"], correlations="with")
     woc = meic.exact.solve(system, bath, tlist=uncorrelated_tlist, e_ops=["jx"], correlations="without")

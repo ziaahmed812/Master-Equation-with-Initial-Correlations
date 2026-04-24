@@ -3,18 +3,16 @@ import master_equation_initial_correlations as meic
 
 
 system = meic.SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
-bath = meic.BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
 numerics = meic.NumericsConfig(
     omega_nodes=48,
+    omega_max=80.0,
     lambda_nodes=12,
-    instate_omega_nodes=24,
-    instate_lambda_nodes=8,
-    instate_zeta_nodes=8,
-    omega_max_coefficients=80.0,
-    omega_max_tau=80.0,
-    omega_max_instate=80.0,
-    coefficient_points=81,
-    tau_points=81,
+    initial_state_omega_nodes=24,
+    initial_state_lambda_nodes=8,
+    initial_state_zeta_nodes=8,
+    coefficient_time_step=0.0025,
+    correlation_tau_step=0.0025,
 )
 
 tlist = np.linspace(0.0, 0.2, 21)

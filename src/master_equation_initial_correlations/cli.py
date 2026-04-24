@@ -34,15 +34,15 @@ def _default_delta(args: argparse.Namespace, name: str) -> float:
 def _numerics(args: argparse.Namespace) -> NumericsConfig:
     return NumericsConfig(
         omega_nodes=args.omega_nodes,
+        omega_max=args.omega_max,
         lambda_nodes=args.lambda_nodes,
-        instate_omega_nodes=args.instate_omega_nodes,
-        instate_lambda_nodes=args.instate_lambda_nodes,
-        instate_zeta_nodes=args.instate_zeta_nodes,
-        omega_max_coefficients=args.omega_max_coefficients,
-        omega_max_tau=args.omega_max_tau,
-        omega_max_instate=args.omega_max_instate,
-        coefficient_points=args.coefficient_points,
-        tau_points=args.tau_points,
+        initial_state_omega_nodes=args.initial_state_omega_nodes,
+        initial_state_lambda_nodes=args.initial_state_lambda_nodes,
+        initial_state_zeta_nodes=args.initial_state_zeta_nodes,
+        initial_state_omega_max=args.initial_state_omega_max,
+        correlation_omega_max=args.correlation_omega_max,
+        coefficient_time_step=args.coefficient_time_step,
+        correlation_tau_step=args.correlation_tau_step,
         fortran_dtau=args.fortran_dtau,
         fortran_cutoff=args.fortran_cutoff,
     )
@@ -57,7 +57,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         delta=_default_delta(args, "delta"),
     )
     bath = BathParams(
-        family=args.bath,
+        bath_type=args.bath_type,
         kind=args.spectral,
         beta=args.beta,
         coupling=args.coupling,
@@ -111,7 +111,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     run_parser = sub.add_parser("run", help="Run a solver and explicitly save the result.")
-    run_parser.add_argument("--bath", choices=("bosonic", "spin"), default="bosonic")
+    run_parser.add_argument("--bath-type", choices=("bosonic", "spin"), default="bosonic")
     run_parser.add_argument("--model", choices=("pure-dephasing", "spin-boson", "spin-environment"), default="spin-boson")
     run_parser.add_argument("--branch", choices=("wc", "woc"), default="wc", help="wc means with correlations; woc means without correlations.")
     run_parser.add_argument("--spectral", choices=("ohmic", "subohmic", "superohmic"), default="ohmic")
@@ -131,16 +131,16 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--artifacts", action="store_true", help="Also save generated .dat inputs, Fortran sources, and logs.")
     run_parser.add_argument("--overwrite", action="store_true")
     run_parser.add_argument("--quiet", action="store_true")
-    run_parser.add_argument("--omega-nodes", type=int, default=500)
+    run_parser.add_argument("--omega-max", type=float, default=500.0, help="Frequency cutoff for coefficient and correlation integrals.")
+    run_parser.add_argument("--omega-nodes", type=int, default=500, help="Frequency quadrature nodes.")
     run_parser.add_argument("--lambda-nodes", type=int, default=100)
-    run_parser.add_argument("--instate-omega-nodes", type=int, default=260)
-    run_parser.add_argument("--instate-lambda-nodes", type=int, default=40)
-    run_parser.add_argument("--instate-zeta-nodes", type=int, default=40)
-    run_parser.add_argument("--omega-max-coefficients", type=float, default=500.0)
-    run_parser.add_argument("--omega-max-tau", type=float, default=510.0)
-    run_parser.add_argument("--omega-max-instate", type=float, default=500.0)
-    run_parser.add_argument("--coefficient-points", type=int, default=2001)
-    run_parser.add_argument("--tau-points", type=int, default=2001)
+    run_parser.add_argument("--initial-state-omega-nodes", type=int, default=260)
+    run_parser.add_argument("--initial-state-lambda-nodes", type=int, default=40)
+    run_parser.add_argument("--initial-state-zeta-nodes", type=int, default=40)
+    run_parser.add_argument("--initial-state-omega-max", type=float)
+    run_parser.add_argument("--correlation-omega-max", type=float)
+    run_parser.add_argument("--coefficient-time-step", type=float, default=0.0025, help="Time spacing for generated A/B/C coefficient tables.")
+    run_parser.add_argument("--correlation-tau-step", type=float, default=0.0025, help="Tau spacing for generated bath-correlation tables.")
     run_parser.add_argument("--fortran-dtau", type=float, default=0.005)
     run_parser.add_argument("--fortran-cutoff", type=float, default=15.0)
     run_parser.set_defaults(func=_cmd_run)
