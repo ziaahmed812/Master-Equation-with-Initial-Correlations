@@ -18,5 +18,9 @@ Examples:
 - `subohmic_bosonic_bath.py`: bosonic bath with a sub-Ohmic spectrum.
 - `superohmic_bosonic_bath.py`: bosonic bath with a super-Ohmic spectrum.
 - `spin_bath.py`: spin bath with an Ohmic spectrum.
+- `plot_paper_figure_02_pure_dephasing_N4.py`: optional matplotlib plot for
+  the paper's N=4 pure-dephasing benchmark.
 
-Nothing is saved unless the script explicitly calls `result.save(...)`.
+Nothing is saved unless the script explicitly calls `result.save(...)` or
+matplotlib is asked to save a figure. Matplotlib is optional and is not a core
+package dependency.

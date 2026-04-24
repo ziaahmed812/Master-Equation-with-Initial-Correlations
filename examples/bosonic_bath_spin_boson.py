@@ -18,6 +18,7 @@ numerics = meic.NumericsConfig(
 tlist = np.linspace(0.0, 0.2, 21)
 e_ops = ["jx", "jz"]
 
+# Default initial state: reduced system state from joint system-bath equilibrium.
 wc_result = meic.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="with", numerics=numerics)
 woc_result = meic.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="without", numerics=numerics)
 

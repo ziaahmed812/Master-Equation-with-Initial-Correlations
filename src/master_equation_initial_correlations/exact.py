@@ -22,6 +22,8 @@ def solve(
 
     This solver is Python-only and is valid for the bosonic Ohmic
     pure-dephasing limit with ``delta0=0`` and ``delta=0``.
+    It uses the analytical correlated or uncorrelated state construction and
+    does not accept a custom ``initial_state``.
     """
 
     branch = normalize_correlations(correlations)

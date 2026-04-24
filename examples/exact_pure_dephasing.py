@@ -8,6 +8,7 @@ bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupl
 tlist = np.linspace(0.0, 5.0, 101)
 e_ops = ["jx"]
 
+# The exact solver uses its analytical correlated/uncorrelated state construction.
 wc_result = meic.exact.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="with")
 woc_result = meic.exact.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="without")
 

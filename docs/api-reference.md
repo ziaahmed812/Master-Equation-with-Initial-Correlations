@@ -126,9 +126,35 @@ than single-observable calls.
 
 ## Initial States
 
-For Fortran-backed workflows, the default initial state is the correlated
-equilibrium construction associated with the paper. Advanced users may pass a
-validated density matrix through `initial_state=` in `meic.solve(...)`.
+For master-equation workflows, the default initial state is the reduced system
+density matrix generated from the correlated joint equilibrium state of the
+system and bath. This is the initial-state construction used in the paper:
+`SystemParams`, `BathParams`, and the initial-state quadrature controls in
+`NumericsConfig` determine the generated reduced density matrix.
+
+```python
+result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"])
+```
+
+The call above uses the generated correlated-equilibrium reduced system state.
+The `correlations` argument selects the dynamical branch:
+
+- `"with"` keeps the initial system-bath correlation terms.
+- `"without"` runs the corresponding uncorrelated comparison branch.
+
+Advanced users may pass a custom reduced system density matrix:
+
+```python
+dim = system.N + 1
+rho0 = np.eye(dim, dtype=complex) / dim
+
+result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], initial_state=rho0)
+```
+
+The custom matrix must be Hermitian, positive semidefinite, trace-one, and have
+shape `(N + 1, N + 1)`. It replaces the reduced system state sent to the
+numerical backend; it does not define a full custom joint system-bath density
+operator.
 
 The exact pure-dephasing solver uses its analytical correlated or uncorrelated
 construction and does not accept a custom initial state.

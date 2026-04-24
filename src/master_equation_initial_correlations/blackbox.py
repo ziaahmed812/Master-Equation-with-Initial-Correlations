@@ -194,6 +194,10 @@ class _BasePureDephasingBranchSolver:
             metadata={
                 "system": system,
                 "bath": bath,
+                "initial_state": {
+                    "source": "analytical_correlated_or_uncorrelated_pure_dephasing_construction",
+                    "custom_initial_state_supported": False,
+                },
                 "observables": labels,
             },
         )
@@ -299,6 +303,19 @@ class _BaseFortranBranchSolver:
             metadata={
                 "system": system,
                 "bath": bath,
+                "initial_state": {
+                    "source": (
+                        "user_supplied_reduced_system_density_matrix"
+                        if self.initial_state is not None
+                        else "generated_from_correlated_joint_system_bath_equilibrium"
+                    ),
+                    "shape": (
+                        list(np.asarray(self.initial_state).shape)
+                        if self.initial_state is not None
+                        else [system.N + 1, system.N + 1]
+                    ),
+                    "custom_joint_state": False,
+                },
                 "observables": labels,
                 "observable_parameters": [
                     _simulation_params(
@@ -359,6 +376,11 @@ def solve(
     """Run the master-equation solver from explicit physical inputs.
 
     The public form is ``solve(system, bath, tlist=..., e_ops=...)``.
+    If ``initial_state`` is not supplied, the solver generates the reduced
+    system density matrix from the correlated joint system-bath equilibrium
+    state determined by ``system`` and ``bath``. A supplied ``initial_state``
+    must be a reduced system density matrix; it does not define a full custom
+    joint system-bath state.
     """
 
     if not isinstance(bath, BathParams):
