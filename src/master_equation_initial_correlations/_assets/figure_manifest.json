@@ -39,9 +39,7 @@
       "paths": {
         "asset_dir": "figures/pure_dephasing_ohmic_j0p5",
         "inputs_dir": "figures/pure_dephasing_ohmic_j0p5/inputs",
-        "tables_dir": "figures/pure_dephasing_ohmic_j0p5/tables",
-        "published_dir": "figures/pure_dephasing_ohmic_j0p5/published",
-        "rendered_dir": "figures/pure_dephasing_ohmic_j0p5/rendered"
+        "tables_dir": "figures/pure_dephasing_ohmic_j0p5/tables"
       }
     },
     {
@@ -83,9 +81,7 @@
       "paths": {
         "asset_dir": "figures/pure_dephasing_ohmic_j2",
         "inputs_dir": "figures/pure_dephasing_ohmic_j2/inputs",
-        "tables_dir": "figures/pure_dephasing_ohmic_j2/tables",
-        "published_dir": "figures/pure_dephasing_ohmic_j2/published",
-        "rendered_dir": "figures/pure_dephasing_ohmic_j2/rendered"
+        "tables_dir": "figures/pure_dephasing_ohmic_j2/tables"
       }
     },
     {
@@ -127,9 +123,7 @@
       "paths": {
         "asset_dir": "figures/pure_dephasing_ohmic_j5",
         "inputs_dir": "figures/pure_dephasing_ohmic_j5/inputs",
-        "tables_dir": "figures/pure_dephasing_ohmic_j5/tables",
-        "published_dir": "figures/pure_dephasing_ohmic_j5/published",
-        "rendered_dir": "figures/pure_dephasing_ohmic_j5/rendered"
+        "tables_dir": "figures/pure_dephasing_ohmic_j5/tables"
       }
     },
     {
@@ -171,9 +165,7 @@
       "paths": {
         "asset_dir": "figures/beyond_pure_dephasing_ohmic_j1",
         "inputs_dir": "figures/beyond_pure_dephasing_ohmic_j1/inputs",
-        "tables_dir": "figures/beyond_pure_dephasing_ohmic_j1/tables",
-        "published_dir": "figures/beyond_pure_dephasing_ohmic_j1/published",
-        "rendered_dir": "figures/beyond_pure_dephasing_ohmic_j1/rendered"
+        "tables_dir": "figures/beyond_pure_dephasing_ohmic_j1/tables"
       }
     },
     {
@@ -215,9 +207,7 @@
       "paths": {
         "asset_dir": "figures/beyond_pure_dephasing_ohmic_j2",
         "inputs_dir": "figures/beyond_pure_dephasing_ohmic_j2/inputs",
-        "tables_dir": "figures/beyond_pure_dephasing_ohmic_j2/tables",
-        "published_dir": "figures/beyond_pure_dephasing_ohmic_j2/published",
-        "rendered_dir": "figures/beyond_pure_dephasing_ohmic_j2/rendered"
+        "tables_dir": "figures/beyond_pure_dephasing_ohmic_j2/tables"
       }
     },
     {
@@ -259,9 +249,7 @@
       "paths": {
         "asset_dir": "figures/beyond_pure_dephasing_ohmic_j5",
         "inputs_dir": "figures/beyond_pure_dephasing_ohmic_j5/inputs",
-        "tables_dir": "figures/beyond_pure_dephasing_ohmic_j5/tables",
-        "published_dir": "figures/beyond_pure_dephasing_ohmic_j5/published",
-        "rendered_dir": "figures/beyond_pure_dephasing_ohmic_j5/rendered"
+        "tables_dir": "figures/beyond_pure_dephasing_ohmic_j5/tables"
       }
     },
     {
@@ -303,9 +291,7 @@
       "paths": {
         "asset_dir": "figures/beta_compare_ohmic_beta0p5_j5",
         "inputs_dir": "figures/beta_compare_ohmic_beta0p5_j5/inputs",
-        "tables_dir": "figures/beta_compare_ohmic_beta0p5_j5/tables",
-        "published_dir": "figures/beta_compare_ohmic_beta0p5_j5/published",
-        "rendered_dir": "figures/beta_compare_ohmic_beta0p5_j5/rendered"
+        "tables_dir": "figures/beta_compare_ohmic_beta0p5_j5/tables"
       }
     },
     {
@@ -347,9 +333,7 @@
       "paths": {
         "asset_dir": "figures/beta_compare_ohmic_beta1p5_j5",
         "inputs_dir": "figures/beta_compare_ohmic_beta1p5_j5/inputs",
-        "tables_dir": "figures/beta_compare_ohmic_beta1p5_j5/tables",
-        "published_dir": "figures/beta_compare_ohmic_beta1p5_j5/published",
-        "rendered_dir": "figures/beta_compare_ohmic_beta1p5_j5/rendered"
+        "tables_dir": "figures/beta_compare_ohmic_beta1p5_j5/tables"
       }
     },
     {
@@ -391,9 +375,7 @@
       "paths": {
         "asset_dir": "figures/jx2_ohmic_j2",
         "inputs_dir": "figures/jx2_ohmic_j2/inputs",
-        "tables_dir": "figures/jx2_ohmic_j2/tables",
-        "published_dir": "figures/jx2_ohmic_j2/published",
-        "rendered_dir": "figures/jx2_ohmic_j2/rendered"
+        "tables_dir": "figures/jx2_ohmic_j2/tables"
       }
     },
     {
@@ -435,9 +417,7 @@
       "paths": {
         "asset_dir": "figures/jx2_ohmic_j5",
         "inputs_dir": "figures/jx2_ohmic_j5/inputs",
-        "tables_dir": "figures/jx2_ohmic_j5/tables",
-        "published_dir": "figures/jx2_ohmic_j5/published",
-        "rendered_dir": "figures/jx2_ohmic_j5/rendered"
+        "tables_dir": "figures/jx2_ohmic_j5/tables"
       }
     },
     {
@@ -480,9 +460,7 @@
       "paths": {
         "asset_dir": "figures/subohmic_s0p5_j2",
         "inputs_dir": "figures/subohmic_s0p5_j2/inputs",
-        "tables_dir": "figures/subohmic_s0p5_j2/tables",
-        "published_dir": "figures/subohmic_s0p5_j2/published",
-        "rendered_dir": "figures/subohmic_s0p5_j2/rendered"
+        "tables_dir": "figures/subohmic_s0p5_j2/tables"
       }
     },
     {
@@ -525,9 +503,7 @@
       "paths": {
         "asset_dir": "figures/subohmic_s0p5_j5",
         "inputs_dir": "figures/subohmic_s0p5_j5/inputs",
-        "tables_dir": "figures/subohmic_s0p5_j5/tables",
-        "published_dir": "figures/subohmic_s0p5_j5/published",
-        "rendered_dir": "figures/subohmic_s0p5_j5/rendered"
+        "tables_dir": "figures/subohmic_s0p5_j5/tables"
       }
     },
     {
@@ -569,9 +545,7 @@
       "paths": {
         "asset_dir": "figures/spin_environment_ohmic_j2",
         "inputs_dir": "figures/spin_environment_ohmic_j2/inputs",
-        "tables_dir": "figures/spin_environment_ohmic_j2/tables",
-        "published_dir": "figures/spin_environment_ohmic_j2/published",
-        "rendered_dir": "figures/spin_environment_ohmic_j2/rendered"
+        "tables_dir": "figures/spin_environment_ohmic_j2/tables"
       }
     },
     {
@@ -613,9 +587,7 @@
       "paths": {
         "asset_dir": "figures/spin_environment_ohmic_j5",
         "inputs_dir": "figures/spin_environment_ohmic_j5/inputs",
-        "tables_dir": "figures/spin_environment_ohmic_j5/tables",
-        "published_dir": "figures/spin_environment_ohmic_j5/published",
-        "rendered_dir": "figures/spin_environment_ohmic_j5/rendered"
+        "tables_dir": "figures/spin_environment_ohmic_j5/tables"
       }
     }
   ]

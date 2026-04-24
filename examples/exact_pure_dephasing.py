@@ -1,22 +1,16 @@
-from master_equation_initial_correlations import BathParams, PureDephasingSolver, RunConfig, SystemParams
+import numpy as np
+import master_equation_initial_correlations as meic
 
 
-system = SystemParams(
-    N=4,
-    epsilon0=4.0,
-    epsilon=4.0,
-    delta0=0.0,
-    delta=0.0,
-)
-bath = BathParams(
-    kind="ohmic",
-    beta=1.0,
-    coupling=0.05,
-    omega_c=5.0,
-)
+system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
+bath = meic.BathParams(family="bosonic", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
 
-solver = PureDephasingSolver(system=system, bath=bath, observable="jx")
-result = solver.run(RunConfig(output_dir="output-pure-dephasing-N4"))
+tlist = np.linspace(0.0, 5.0, 101)
+e_ops = ["jx"]
 
-print(f"Saved correlated curve: {result.output_files['exact_correlated']}")
-print(f"Saved uncorrelated curve: {result.output_files['exact_uncorrelated']}")
+wc_result = meic.exact.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="with")
+woc_result = meic.exact.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="without")
+
+print(wc_result.times[:5])
+print(wc_result.e_data["jx"][:5])
+print(woc_result.e_data["jx"][:5])

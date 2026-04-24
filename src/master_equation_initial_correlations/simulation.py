@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import asdict
 from pathlib import Path
 import sys
-from typing import Any
 import warnings
 
 import numpy as np
@@ -13,104 +12,20 @@ from ._types import NumericsConfig, ReferenceExample, SimulationParams, Simulati
 from .catalog import list_examples
 from .fortran_runner import run_parameterized_fortran
 from .generated_inputs import validate_initial_state, validate_numerics
-from .observables import ObservableParseError, normalize_observable_expression, parse_observable
+from .observables import normalize_observable_expression, parse_observable
 from .pure_dephasing import PureDephasingParams, exact_curves
+from ._validation import normalize_simulation_params
 
 
 EXACT_OUTPUTS = ("exact-correlated.dat", "exact-uncorrelated.dat", "simulation_summary.json")
-
-
-def _clean_token(value: str) -> str:
-    return value.strip().lower().replace("_", "-")
 
 
 def _close(a: float, b: float, *, atol: float = 1.0e-12) -> bool:
     return abs(float(a) - float(b)) <= atol
 
 
-def _positive_integer(value: Any, *, name: str) -> int:
-    if isinstance(value, bool):
-        raise ValueError(f"{name} must be a positive integer.")
-    try:
-        integer_value = int(value)
-        float_value = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a positive integer.") from exc
-    if integer_value <= 0 or float_value != float(integer_value):
-        raise ValueError(f"{name} must be a positive integer.")
-    return integer_value
-
-
 def _normalize_params(params: SimulationParams) -> SimulationParams:
-    bath = _clean_token(params.bath)
-    model = _clean_token(params.model)
-    spectral = _clean_token(params.spectral)
-    observable = params.observable
-    if not isinstance(observable, np.ndarray):
-        observable = normalize_observable_expression(str(observable))
-    N = _positive_integer(params.N, name="N")
-    if spectral == "sub-ohmic":
-        spectral = "subohmic"
-    if spectral == "super-ohmic":
-        spectral = "superohmic"
-
-    if bath not in {"bosonic", "spin"}:
-        raise ValueError("bath must be either 'bosonic' or 'spin'")
-    if model not in {"pure-dephasing", "spin-boson", "spin-environment"}:
-        raise ValueError("model must be 'pure-dephasing', 'spin-boson', or 'spin-environment'")
-    if bath == "spin" and model != "spin-environment":
-        raise ValueError("spin bath runs use model='spin-environment'")
-    if bath == "bosonic" and model == "spin-environment":
-        raise ValueError("spin-environment is a spin bath model; use bath='spin'")
-    if spectral not in {"ohmic", "subohmic", "superohmic"}:
-        raise ValueError("spectral must be 'ohmic', 'subohmic', or 'superohmic'")
-    try:
-        parse_observable(observable, N / 2.0)
-    except ObservableParseError as exc:
-        raise ValueError(str(exc)) from exc
-    if model == "pure-dephasing":
-        if not _close(params.delta0, 0.0) or not _close(params.delta, 0.0):
-            raise ValueError("pure-dephasing runs require delta0=0 and delta=0")
-    if model != "pure-dephasing":
-        if float(np.hypot(params.epsilon, params.delta)) <= 0.0:
-            raise ValueError("non-pure-dephasing runs require a nonzero final system splitting")
-        if float(np.hypot(params.epsilon0, params.delta0)) <= 0.0:
-            raise ValueError("non-pure-dephasing runs require a nonzero initial system splitting")
-    if params.beta <= 0:
-        raise ValueError("beta must be positive")
-    if params.coupling < 0:
-        raise ValueError("coupling must be non-negative")
-    if params.omega_c <= 0:
-        raise ValueError("omega_c must be positive")
-    if spectral == "ohmic" and params.s is not None and not _close(params.s, 1.0):
-        raise ValueError("Ohmic spectra use s=1; omit s or set s=1.")
-    if spectral == "subohmic":
-        if params.s is None:
-            raise ValueError("sub-Ohmic spectra require s with 0 < s < 1.")
-        if not (0.0 < params.s < 1.0):
-            raise ValueError("sub-Ohmic spectra require 0 < s < 1.")
-    if spectral == "superohmic":
-        if params.s is None:
-            raise ValueError("super-Ohmic spectra require s > 1.")
-        if params.s <= 1.0:
-            raise ValueError("super-Ohmic spectra require s > 1.")
-
-    return SimulationParams(
-        bath=bath,
-        model=model,
-        N=N,
-        epsilon0=params.epsilon0,
-        epsilon=params.epsilon,
-        delta0=params.delta0,
-        delta=params.delta,
-        beta=params.beta,
-        coupling=params.coupling,
-        omega_c=params.omega_c,
-        spectral=spectral,
-        observable=observable,
-        s=1.0 if spectral == "ohmic" else params.s,
-        initial_state=params.initial_state,
-    )
+    return normalize_simulation_params(params)
 
 
 def _example_matches(example: ReferenceExample, params: SimulationParams) -> bool:
@@ -317,7 +232,6 @@ def run_simulation(
     params: SimulationParams,
     output_dir: str | Path | None = None,
     *,
-    plot: bool = False,
     verify: bool = True,
     t_max: float = 5.0,
     dt: float = 0.2,
@@ -361,7 +275,6 @@ def run_simulation(
         output_dir,
         example=example,
         verify=verify,
-        render=plot,
         overwrite=overwrite,
         verbose=verbose,
         save_density=save_density,
@@ -378,8 +291,6 @@ def run_simulation(
         uncorrelated_error=rerun.uncorrelated_error,
         exact_correlated_error=rerun.exact_correlated_error,
         exact_uncorrelated_error=rerun.exact_uncorrelated_error,
-        rendered_eps=rerun.rendered_eps,
-        rendered_png=rerun.rendered_png,
         summary_path=rerun.summary_path,
         verification_performed=rerun.verification_performed,
         output_files=rerun.output_files,

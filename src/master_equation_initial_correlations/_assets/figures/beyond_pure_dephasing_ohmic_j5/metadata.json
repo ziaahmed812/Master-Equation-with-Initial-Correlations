@@ -37,8 +37,6 @@
   "paths": {
     "asset_dir": "figures/beyond_pure_dephasing_ohmic_j5",
     "inputs_dir": "figures/beyond_pure_dephasing_ohmic_j5/inputs",
-    "tables_dir": "figures/beyond_pure_dephasing_ohmic_j5/tables",
-    "published_dir": "figures/beyond_pure_dephasing_ohmic_j5/published",
-    "rendered_dir": "figures/beyond_pure_dephasing_ohmic_j5/rendered"
+    "tables_dir": "figures/beyond_pure_dephasing_ohmic_j5/tables"
   }
 }

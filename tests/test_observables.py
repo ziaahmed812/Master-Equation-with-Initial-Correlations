@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
 
-from master_equation_initial_correlations import ObservableParseError, SimulationParams, parse_observable, run_simulation
+from master_equation_initial_correlations import ObservableParseError, parse_observable
+from master_equation_initial_correlations._types import SimulationParams
+from master_equation_initial_correlations.simulation import run_simulation
 
 
 def test_jx2_alias_matches_explicit_square() -> None:

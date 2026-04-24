@@ -1,25 +1,14 @@
-from pathlib import Path
-
-from master_equation_initial_correlations import (
-    BathParams,
-    BosonicBathSolver,
-    NumericsConfig,
-    PureDephasingSolver,
-    RunConfig,
-    SystemParams,
-)
+import numpy as np
+import master_equation_initial_correlations as meic
 
 
 def main() -> None:
-    root = Path("smoke-output")
-    exact = PureDephasingSolver(
-        system=SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0),
-        bath=BathParams(kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0),
-        observable="jx",
-    )
-    exact.run(RunConfig(output_dir=root / "exact-pure-dephasing", overwrite=True, verbose=False))
+    exact_system = meic.SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
+    exact_bath = meic.BathParams(family="bosonic", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
+    exact_tlist = np.linspace(0.0, 0.5, 6)
+    exact_result = meic.exact.solve(exact_system, exact_bath, tlist=exact_tlist, e_ops=["jx"])
 
-    numerics = NumericsConfig(
+    numerics = meic.NumericsConfig(
         omega_nodes=24,
         lambda_nodes=8,
         instate_omega_nodes=12,
@@ -30,15 +19,14 @@ def main() -> None:
         omega_max_instate=60.0,
         coefficient_points=41,
         tau_points=41,
-        fortran_t_final=0.05,
     )
-    bosonic = BosonicBathSolver(
-        system=SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5),
-        bath=BathParams(kind="superohmic", s=3.0, beta=1.0, coupling=0.05, omega_c=5.0),
-        observable="jy",
-    )
-    bosonic.run(RunConfig(output_dir=root / "bosonic-superohmic", overwrite=True, verbose=False, verify=False, numerics=numerics))
-    print(root)
+    system = meic.SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
+    bath = meic.BathParams(family="bosonic", kind="superohmic", s=3.0, beta=1.0, coupling=0.05, omega_c=5.0)
+    tlist = np.linspace(0.0, 0.05, 6)
+    bosonic_result = meic.solve(system, bath, tlist=tlist, e_ops=["jy"], numerics=numerics, verbose=False)
+
+    print(exact_result.e_data["jx"][:2])
+    print(bosonic_result.e_data["jy"][:2])
 
 
 if __name__ == "__main__":

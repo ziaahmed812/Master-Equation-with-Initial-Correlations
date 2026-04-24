@@ -1,6 +1,6 @@
 import numpy as np
 
-from master_equation_initial_correlations import load_reference_curves
+from master_equation_initial_correlations.reference import load_reference_curves
 
 
 def test_load_reference_curves_pure_dephasing_has_exact() -> None:

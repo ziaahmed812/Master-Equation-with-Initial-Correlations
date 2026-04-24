@@ -37,8 +37,6 @@
   "paths": {
     "asset_dir": "figures/beta_compare_ohmic_beta0p5_j5",
     "inputs_dir": "figures/beta_compare_ohmic_beta0p5_j5/inputs",
-    "tables_dir": "figures/beta_compare_ohmic_beta0p5_j5/tables",
-    "published_dir": "figures/beta_compare_ohmic_beta0p5_j5/published",
-    "rendered_dir": "figures/beta_compare_ohmic_beta0p5_j5/rendered"
+    "tables_dir": "figures/beta_compare_ohmic_beta0p5_j5/tables"
   }
 }

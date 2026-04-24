@@ -37,8 +37,6 @@
   "paths": {
     "asset_dir": "figures/jx2_ohmic_j5",
     "inputs_dir": "figures/jx2_ohmic_j5/inputs",
-    "tables_dir": "figures/jx2_ohmic_j5/tables",
-    "published_dir": "figures/jx2_ohmic_j5/published",
-    "rendered_dir": "figures/jx2_ohmic_j5/rendered"
+    "tables_dir": "figures/jx2_ohmic_j5/tables"
   }
 }

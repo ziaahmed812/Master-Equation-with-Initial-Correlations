@@ -14,11 +14,12 @@ import tempfile
 import numpy as np
 
 from ._resources import asset, copy_resource_tree, ensure_clean_dir, load_table, prepare_output_dir, write_json, write_table
-from ._types import NumericsConfig, ReferenceCurves, ReferenceExample, RerunResult, SimulationParams
+from ._types import NumericsConfig, ReferenceExample, RerunResult, SimulationParams
 from .catalog import get_example
 from .generated_inputs import coefficient_index_step, numerics_summary, tau_index_step, validate_numerics, write_complex_fortran, write_generated_input_files
 from .observables import normalize_observable_expression, parse_observable
 from .pure_dephasing import PureDephasingParams, exact_curves
+from ._validation import normalize_simulation_params
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,6 @@ class FortranExecutionError(RuntimeError):
 
 RERUN_OUTPUTS = (
     "runs",
-    "plots",
     "sources",
     "logs",
     "regeneration_summary.json",
@@ -481,7 +481,7 @@ def _compile_and_run(run_dir: Path, branch: str, config: FortranBuildConfig) -> 
         ) from exc
     (run_dir / "compile.stdout.log").write_text(compile_proc.stdout)
     (run_dir / "compile.stderr.log").write_text(compile_proc.stderr)
-    run_cmd = [str(run_dir / binary_name)]
+    run_cmd = [f"./{binary_name}"]
     try:
         run_proc = _run(run_cmd, run_dir)
     except subprocess.CalledProcessError as exc:
@@ -669,18 +669,175 @@ def _copy_public_sources_and_logs(correlated_dir: Path, uncorrelated_dir: Path, 
     return source_files, log_files
 
 
+def _copy_public_branch_sources_and_logs(run_dir: Path, output_dir: Path, branch: str) -> tuple[dict[str, Path], dict[str, Path]]:
+    sources_dir = output_dir / "sources"
+    logs_dir = output_dir / "logs"
+    sources_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    source_name = "test6wc.f" if branch == "correlated" else "test6woc.f"
+    source_files = {
+        f"{branch}_solver": sources_dir / f"{branch}_solver.f",
+        "dimensions_include": sources_dir / "dimensions.inc",
+    }
+    shutil.copy2(run_dir / source_name, source_files[f"{branch}_solver"])
+    shutil.copy2(run_dir / "dimensions.inc", source_files["dimensions_include"])
+
+    log_files: dict[str, Path] = {}
+    for name in ("compile.stdout.log", "compile.stderr.log", "run.stdout.log", "run.stderr.log"):
+        src = run_dir / name
+        if src.exists():
+            key = f"{branch}_{name.removesuffix('.log').replace('.', '_')}"
+            dst = logs_dir / f"{branch}_{name}"
+            shutil.copy2(src, dst)
+            log_files[key] = dst
+    return source_files, log_files
+
+
+def run_parameterized_fortran_branch(
+    params: SimulationParams,
+    output_dir: str | Path,
+    *,
+    branch: str,
+    overwrite: bool = False,
+    verbose: bool = True,
+    save_density: bool = False,
+    numerics: NumericsConfig | None = None,
+) -> RerunResult:
+    params = normalize_simulation_params(params)
+    if branch not in {"correlated", "uncorrelated"}:
+        raise ValueError("branch must be 'correlated' or 'uncorrelated'.")
+    numerics = validate_numerics(numerics)
+    config = _build_config()
+    compiler_path = shutil.which(config.compiler)
+    if compiler_path is None:
+        raise RuntimeError(f"Fortran compiler {config.compiler!r} was not found. Run `meic doctor` for details.")
+
+    output_dir = Path(output_dir)
+    prepare_output_dir(output_dir, overwrite=overwrite, generated_names=RERUN_OUTPUTS)
+
+    run_dir = _stage_generated_branch(params, branch, output_dir, numerics, save_density=save_density)
+    _emit(f"[meic] raw {branch} run directory: {run_dir}", verbose=verbose)
+    generated_inputs = write_generated_input_files(params, run_dir, numerics)
+    generated_inputs["OBSERVABLE.dat"] = _write_observable_input(params, run_dir)
+    _emit("[meic] generated coefficient, correlation, initial-state, and observable input files", verbose=verbose)
+
+    _emit(f"[meic] compiling/running {branch} Fortran branch", verbose=verbose)
+    branch_meta = _compile_and_run(run_dir, branch, config)
+
+    observable_src = run_dir / _observable_output_name(branch)
+    public_name = "observable-correlated.dat" if branch == "correlated" else "observable-uncorrelated.dat"
+    public_key = "correlated" if branch == "correlated" else "uncorrelated"
+    output_files = {
+        public_key: _write_observable_public_table(
+            params,
+            observable_src,
+            output_dir / public_name,
+            branch=branch,
+            numerics=numerics,
+        )
+    }
+
+    observable_expression = normalize_observable_expression(params.observable)
+    if observable_expression == "jx":
+        legacy_name = "EXPX-C.DAT" if branch == "correlated" else "EXPX-UNC.DAT"
+        if (run_dir / legacy_name).exists():
+            output_files[f"legacy_jx_{public_key}"] = _write_generated_public_table(
+                params,
+                run_dir / legacy_name,
+                output_dir / legacy_name,
+                branch=branch,
+                columns=f"t legacy_jx_{public_key}",
+                numerics=numerics,
+            )
+    if observable_expression == "jz":
+        legacy_name = "EXPZ-C.DAT" if branch == "correlated" else "EXPZ-UNC.DAT"
+        if (run_dir / legacy_name).exists():
+            output_files[f"jz_{public_key}"] = _write_generated_public_table(
+                params,
+                run_dir / legacy_name,
+                output_dir / legacy_name,
+                branch=branch,
+                columns=f"t jz_{public_key}",
+                numerics=numerics,
+            )
+    if save_density:
+        density_name = _density_output_name(branch)
+        output_files[f"density_{public_key}"] = _copy_generated_text_with_header(
+            params,
+            run_dir / density_name,
+            output_dir / density_name,
+            columns="t followed by real/imag pairs for the internal Fortran density vector",
+            numerics=numerics,
+        )
+
+    input_files: dict[str, Path] = {}
+    for input_name in ("A.dat", "B.dat", "C.dat", "integraldatasimpson.dat", "bathcorrelation.dat", "INSTATE.dat", "OBSERVABLE.dat"):
+        input_files[input_name] = _copy_generated_text_with_header(
+            params,
+            run_dir / input_name,
+            output_dir / input_name,
+            columns=_input_file_columns(params, input_name),
+            numerics=numerics,
+        )
+    input_files["params.in"] = _copy_generated_text_with_header(
+        params,
+        run_dir / "params.in",
+        output_dir / "params.in",
+        columns="Fortran run constants: delta, epsilon, coupling, beta, omega_c, dtau, dt, cutoff, t_final, save_density",
+        numerics=numerics,
+    )
+    source_files, log_files = _copy_public_branch_sources_and_logs(run_dir, output_dir, branch)
+
+    summary = {
+        "input_mode": "generated",
+        "parameters": _serializable_params(params),
+        "numerics": numerics_summary(numerics),
+        "reference_example": None,
+        "compiler": compiler_path,
+        "build": asdict(config),
+        "fortran": {
+            "template_solver": _template_solver_id(params),
+            "save_density": save_density,
+            branch: branch_meta,
+            "verification_performed": False,
+        },
+        "public_outputs": {key: str(path) for key, path in output_files.items()},
+        "public_inputs": {key: str(path) for key, path in input_files.items()},
+        "public_sources": {key: str(path) for key, path in source_files.items()},
+        "logs": {key: str(path) for key, path in log_files.items()},
+    }
+    summary_path = output_dir / "regeneration_summary.json"
+    write_json(summary_path, summary)
+    _emit(f"[meic] saved branch outputs in {output_dir}", verbose=verbose)
+    return RerunResult(
+        example=None,
+        output_dir=output_dir,
+        correlated_error=None,
+        uncorrelated_error=None,
+        jz_correlated_error=None,
+        jz_uncorrelated_error=None,
+        summary_path=summary_path,
+        verification_performed=False,
+        output_files=output_files,
+        input_files=input_files,
+        source_files=source_files,
+        log_files=log_files,
+    )
+
+
 def run_parameterized_fortran(
     params: SimulationParams,
     output_dir: str | Path,
     *,
     example: ReferenceExample | None = None,
     verify: bool = True,
-    render: bool = False,
     overwrite: bool = False,
     verbose: bool = True,
     save_density: bool = False,
     numerics: NumericsConfig | None = None,
 ) -> RerunResult:
+    params = normalize_simulation_params(params)
     numerics = validate_numerics(numerics)
     config = _build_config()
     compiler_path = shutil.which(config.compiler)
@@ -817,22 +974,6 @@ def run_parameterized_fortran(
     source_files["dimensions_include"] = output_dir / "sources" / "dimensions.inc"
     shutil.copy2(correlated_dir / "dimensions.inc", source_files["dimensions_include"])
 
-    rendered_eps = None
-    rendered_png = None
-    if render and example is not None:
-        from .plotting import plot_reference_curves
-
-        plot_correlated = np.array(correlated, copy=True)
-        plot_uncorrelated = np.array(uncorrelated, copy=True)
-        curves = ReferenceCurves(
-            example=example,
-            correlated=plot_correlated,
-            uncorrelated=plot_uncorrelated,
-        )
-        outputs = plot_reference_curves(curves, output_dir / "plots")
-        rendered_eps = outputs["eps"]
-        rendered_png = outputs["png"]
-
     summary = {
         "input_mode": "generated",
         "parameters": _serializable_params(params),
@@ -849,8 +990,6 @@ def run_parameterized_fortran(
             "jz_uncorrelated_error": jz_uncorrelated_error,
             "verification_performed": verification_performed,
         },
-        "rendered_eps": str(rendered_eps) if rendered_eps else None,
-        "rendered_png": str(rendered_png) if rendered_png else None,
         "public_outputs": {key: str(path) for key, path in output_files.items()},
         "public_inputs": {key: str(path) for key, path in input_files.items()},
         "public_sources": {key: str(path) for key, path in source_files.items()},
@@ -867,8 +1006,6 @@ def run_parameterized_fortran(
         uncorrelated_error=uncorrelated_error,
         jz_correlated_error=jz_correlated_error,
         jz_uncorrelated_error=jz_uncorrelated_error,
-        rendered_eps=rendered_eps,
-        rendered_png=rendered_png,
         summary_path=summary_path,
         verification_performed=verification_performed,
         output_files=output_files,
@@ -883,7 +1020,6 @@ def rerun_example(
     output_dir: str | Path,
     *,
     verify: bool = True,
-    render: bool = False,
     overwrite: bool = False,
     verbose: bool = True,
 ) -> RerunResult:
@@ -989,27 +1125,6 @@ def rerun_example(
     input_files[instate].write_text(f"{instate_header}\n{instate_body}\n")
     source_files, log_files = _copy_public_sources_and_logs(correlated_dir, uncorrelated_dir, output_dir)
 
-    rendered_eps = None
-    rendered_png = None
-    if render:
-        from .plotting import plot_reference_curves
-
-        plot_correlated = np.array(correlated, copy=True)
-        plot_uncorrelated = np.array(uncorrelated, copy=True)
-        if example.plot_divisor != 1.0:
-            plot_correlated[:, 1] = plot_correlated[:, 1] / example.plot_divisor
-            plot_uncorrelated[:, 1] = plot_uncorrelated[:, 1] / example.plot_divisor
-        curves = ReferenceCurves(
-            example=example,
-            correlated=plot_correlated,
-            uncorrelated=plot_uncorrelated,
-            exact_correlated=exact_correlated,
-            exact_uncorrelated=exact_uncorrelated,
-        )
-        outputs = plot_reference_curves(curves, output_dir / "plots")
-        rendered_eps = outputs["eps"]
-        rendered_png = outputs["png"]
-
     summary = {
         "example_id": example.public_id,
         "compiler": compiler_path,
@@ -1025,8 +1140,6 @@ def rerun_example(
             "correlated_max_abs_error": exact_correlated_error,
             "uncorrelated_max_abs_error": exact_uncorrelated_error,
         },
-        "rendered_eps": str(rendered_eps) if rendered_eps else None,
-        "rendered_png": str(rendered_png) if rendered_png else None,
         "public_outputs": {key: str(path) for key, path in output_files.items()},
         "public_inputs": {key: str(path) for key, path in input_files.items()},
         "public_sources": {key: str(path) for key, path in source_files.items()},
@@ -1043,8 +1156,6 @@ def rerun_example(
         jz_uncorrelated_error=jz_uncorrelated_error,
         exact_correlated_error=exact_correlated_error,
         exact_uncorrelated_error=exact_uncorrelated_error,
-        rendered_eps=rendered_eps,
-        rendered_png=rendered_png,
         summary_path=summary_path,
         verification_performed=verify,
         output_files=output_files,

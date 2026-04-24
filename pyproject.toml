@@ -24,7 +24,6 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
-  "matplotlib>=3.8",
   "numpy>=1.24",
   "scipy>=1.10",
 ]
@@ -56,8 +55,6 @@ master_equation_initial_correlations = [
   "_assets/figures/**/*.json",
   "_assets/figures/**/*.dat",
   "_assets/figures/**/*.DAT",
-  "_assets/figures/**/*.eps",
-  "_assets/figures/**/*.png",
   "_assets/solvers/**/*.f",
 ]
 

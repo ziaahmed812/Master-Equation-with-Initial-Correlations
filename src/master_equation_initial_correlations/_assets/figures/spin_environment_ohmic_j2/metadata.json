@@ -37,8 +37,6 @@
   "paths": {
     "asset_dir": "figures/spin_environment_ohmic_j2",
     "inputs_dir": "figures/spin_environment_ohmic_j2/inputs",
-    "tables_dir": "figures/spin_environment_ohmic_j2/tables",
-    "published_dir": "figures/spin_environment_ohmic_j2/published",
-    "rendered_dir": "figures/spin_environment_ohmic_j2/rendered"
+    "tables_dir": "figures/spin_environment_ohmic_j2/tables"
   }
 }

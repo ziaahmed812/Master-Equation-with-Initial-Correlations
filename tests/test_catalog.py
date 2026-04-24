@@ -1,4 +1,4 @@
-from master_equation_initial_correlations import get_example, list_examples
+from master_equation_initial_correlations.catalog import get_example, list_examples
 
 
 def test_list_examples_uses_public_physical_ids() -> None:

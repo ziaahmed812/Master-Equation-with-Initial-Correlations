@@ -37,8 +37,6 @@
   "paths": {
     "asset_dir": "figures/pure_dephasing_ohmic_j0p5",
     "inputs_dir": "figures/pure_dephasing_ohmic_j0p5/inputs",
-    "tables_dir": "figures/pure_dephasing_ohmic_j0p5/tables",
-    "published_dir": "figures/pure_dephasing_ohmic_j0p5/published",
-    "rendered_dir": "figures/pure_dephasing_ohmic_j0p5/rendered"
+    "tables_dir": "figures/pure_dephasing_ohmic_j0p5/tables"
   }
 }

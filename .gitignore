@@ -5,3 +5,4 @@ build/
 dist/
 exported-assets/
 output-*/
+paper-plots-output/

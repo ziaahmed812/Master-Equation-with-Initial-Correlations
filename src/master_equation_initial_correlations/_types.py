@@ -55,21 +55,7 @@ class BathParams:
     coupling: float = 0.05
     omega_c: float = 5.0
     s: float | None = None
-
-
-@dataclass(frozen=True)
-class RunConfig:
-    """Run-time options shared by notebook, script, and CLI workflows."""
-
-    output_dir: Path | str | None = None
-    overwrite: bool = False
-    verify: bool = True
-    plot: bool = False
-    verbose: bool = True
-    save_density: bool = False
-    t_max: float = 5.0
-    dt: float = 0.2
-    numerics: "NumericsConfig | None" = None
+    family: str = "bosonic"
 
 
 @dataclass(frozen=True)
@@ -125,8 +111,6 @@ class RerunResult:
     jz_uncorrelated_error: float | None
     exact_correlated_error: float | None = None
     exact_uncorrelated_error: float | None = None
-    rendered_eps: Path | None = None
-    rendered_png: Path | None = None
     summary_path: Path | None = None
     verification_performed: bool = True
     output_files: dict[str, Path] | None = None
@@ -165,14 +149,9 @@ class SimulationResult:
     uncorrelated_error: float | None = None
     exact_correlated_error: float | None = None
     exact_uncorrelated_error: float | None = None
-    rendered_eps: Path | None = None
-    rendered_png: Path | None = None
     summary_path: Path | None = None
     verification_performed: bool = True
     output_files: dict[str, Path] | None = None
     input_files: dict[str, Path] | None = None
     source_files: dict[str, Path] | None = None
     log_files: dict[str, Path] | None = None
-
-
-SolverResult = SimulationResult

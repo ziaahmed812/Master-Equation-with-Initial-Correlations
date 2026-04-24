@@ -38,8 +38,6 @@
   "paths": {
     "asset_dir": "figures/subohmic_s0p5_j2",
     "inputs_dir": "figures/subohmic_s0p5_j2/inputs",
-    "tables_dir": "figures/subohmic_s0p5_j2/tables",
-    "published_dir": "figures/subohmic_s0p5_j2/published",
-    "rendered_dir": "figures/subohmic_s0p5_j2/rendered"
+    "tables_dir": "figures/subohmic_s0p5_j2/tables"
   }
 }

@@ -1,5 +1,6 @@
 include README.md LICENSE NOTICE CITATION.bib CITATION.cff
 recursive-include docs *.md
-recursive-include examples *.py
+recursive-include examples *.md *.py
+recursive-include paper-plots *.md *.py
 recursive-include scripts *.py
-recursive-include src/master_equation_initial_correlations/_assets *.json *.dat *.DAT *.eps *.png *.f
+recursive-include src/master_equation_initial_correlations/_assets *.json *.dat *.DAT *.f
