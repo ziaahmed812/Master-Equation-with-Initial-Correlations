@@ -47,6 +47,7 @@ system = meic.SystemParams(
 bath = meic.BathParams(
     family="bosonic",
     kind="ohmic",
+    s=1.0,
     beta=1.0,
     coupling=0.05,
     omega_c=5.0,
@@ -66,7 +67,7 @@ wc_result.e_data["jx"]
 Use `family="spin"` for a spin bath:
 
 ```python
-spin_bath = meic.BathParams(family="spin", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
+spin_bath = meic.BathParams(family="spin", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
 spin_result = meic.solve(system, spin_bath, tlist=tlist, e_ops=["jx"], correlations="with")
 ```
 
@@ -77,7 +78,7 @@ confused with the master-equation workflow:
 
 ```python
 system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-bath = meic.BathParams(family="bosonic", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
+bath = meic.BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
 tlist = np.linspace(0.0, 5.0, 501)
 
 exact_wc = meic.exact.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="with")
@@ -96,7 +97,7 @@ This exact solver is valid for bosonic Ohmic pure dephasing with
 
 `BathParams.kind` chooses the spectrum:
 
-- `kind="ohmic"` uses `s=1`; omit `s` or set `s=1.0`.
+- `kind="ohmic"` uses the spectral exponent `s=1.0`.
 - `kind="subohmic"` requires `0 < s < 1`.
 - `kind="superohmic"` requires `s > 1`.
 

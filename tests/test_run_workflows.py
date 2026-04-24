@@ -175,7 +175,7 @@ def test_exact_output_has_headers_and_overwrite_protection(tmp_path: Path) -> No
 def test_blackbox_pure_dephasing_is_ram_only_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
+    bath = BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
     tlist = np.linspace(0.0, 1.0, 6)
 
     wc = meic.exact.solve(system, bath, tlist=tlist, e_ops=["jx", "jz"], correlations="with")
@@ -190,7 +190,7 @@ def test_blackbox_pure_dephasing_is_ram_only_by_default(tmp_path: Path, monkeypa
 
 def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
+    bath = BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
     result = meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.5, 6), e_ops=["jx", "jz"])
 
     destination = result.save(tmp_path / "saved-result")
@@ -206,7 +206,7 @@ def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
 
 def test_blackbox_tlist_validation() -> None:
     system = SystemParams(N=1, epsilon=4.0)
-    bath = BathParams(family="bosonic", kind="ohmic")
+    bath = BathParams(family="bosonic", kind="ohmic", s=1.0)
     with pytest.raises(ValueError, match="start at 0.0"):
         meic.exact.solve(system, bath, tlist=np.linspace(0.1, 1.0, 5))
     with pytest.raises(ValueError, match="uniformly spaced"):
@@ -229,19 +229,19 @@ def test_blackbox_validation_rejects_bad_spectrum_before_fortran() -> None:
     with pytest.raises(ValueError, match="sub-Ohmic spectra require 0 < s < 1"):
         meic.solve(system, BathParams(kind="subohmic", s=2.0), tlist=tlist, e_ops=["jx"])
     with pytest.raises(ValueError, match="spin-environment"):
-        meic.solve(system, BathParams(family="spin", kind="ohmic"), tlist=tlist, e_ops=["jx"], model="spin-boson")
+        meic.solve(system, BathParams(family="spin", kind="ohmic", s=1.0), tlist=tlist, e_ops=["jx"], model="spin-boson")
 
 
 def test_exact_namespace_rejects_non_pure_dephasing() -> None:
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.5, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic")
+    bath = BathParams(family="bosonic", kind="ohmic", s=1.0)
     with pytest.raises(ValueError, match="delta0=0 and delta=0"):
         meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=["jx"])
 
 
 def test_blackbox_nonhermitian_observable_warns() -> None:
     system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
-    bath = BathParams(family="bosonic", kind="ohmic")
+    bath = BathParams(family="bosonic", kind="ohmic", s=1.0)
     with pytest.warns(RuntimeWarning, match="not Hermitian"):
         meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=["jx*jy"])
 
@@ -277,7 +277,7 @@ def test_blackbox_fortran_solver_returns_arrays_and_saves_artifacts(tmp_path: Pa
         pytest.skip("gfortran not available")
     monkeypatch.chdir(tmp_path)
     system = SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
-    bath = BathParams(family="bosonic", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
+    bath = BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
     tlist = np.linspace(0.0, 0.05, 6)
 
     wc = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="with", numerics=FAST_NUMERICS, verbose=False)

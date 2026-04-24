@@ -124,7 +124,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--beta", type=float, default=1.0)
     run_parser.add_argument("--coupling", type=float, default=0.05)
     run_parser.add_argument("--omega-c", dest="omega_c", type=float, default=5.0)
-    run_parser.add_argument("--s", type=float, help="Spectral exponent for sub-Ohmic or super-Ohmic spectra.")
+    run_parser.add_argument("--s", type=float, help="Spectral exponent: use 1.0 for Ohmic, 0<s<1 for sub-Ohmic, and s>1 for super-Ohmic.")
     run_parser.add_argument("--tmax", type=float, default=5.0)
     run_parser.add_argument("--dt", type=float, default=0.1)
     run_parser.add_argument("--out", type=Path, required=True)

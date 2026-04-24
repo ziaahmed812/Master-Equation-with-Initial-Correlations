@@ -18,13 +18,13 @@ system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5
 `N` is the public spin-size parameter; internally `J = N / 2`.
 
 ```python
-bath = meic.BathParams(family="bosonic", kind="ohmic", beta=1.0, coupling=0.05, omega_c=5.0)
+bath = meic.BathParams(family="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
 bath = meic.BathParams(family="bosonic", kind="subohmic", s=0.5, beta=1.0, coupling=0.05, omega_c=5.0)
 bath = meic.BathParams(family="spin", kind="superohmic", s=3.0, beta=1.0, coupling=0.05, omega_c=5.0)
 ```
 
 `family` is either `"bosonic"` or `"spin"`. `kind` is `"ohmic"`,
-`"subohmic"`, or `"superohmic"`. Ohmic spectra use `s=1`; sub-Ohmic spectra
+`"subohmic"`, or `"superohmic"`. Ohmic spectra use `s=1.0`; sub-Ohmic spectra
 require `0 < s < 1`; super-Ohmic spectra require `s > 1`.
 
 `NumericsConfig` controls quadrature nodes, cutoffs, coefficient grids, and

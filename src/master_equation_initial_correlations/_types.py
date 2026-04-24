@@ -48,7 +48,13 @@ class SystemParams:
 
 @dataclass(frozen=True)
 class BathParams:
-    """Bath parameters for the supported model families."""
+    """Bath parameters for the supported model families.
+
+    The spectral exponent is explicit: Ohmic spectra use ``s=1.0``,
+    sub-Ohmic spectra use ``0 < s < 1``, and super-Ohmic spectra use
+    ``s > 1``. ``s`` may be omitted for backwards-compatible Ohmic inputs,
+    but public examples spell it out.
+    """
 
     kind: str = "ohmic"
     beta: float = 1.0

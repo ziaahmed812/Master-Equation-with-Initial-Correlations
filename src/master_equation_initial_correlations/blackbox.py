@@ -165,7 +165,7 @@ def _exact_states_for_branch(times: np.ndarray, params: PureDephasingParams, bra
 @dataclass(frozen=True)
 class _BasePureDephasingBranchSolver:
     system: SystemParams
-    bath: BathParams = field(default_factory=lambda: BathParams(kind="ohmic"))
+    bath: BathParams = field(default_factory=lambda: BathParams(kind="ohmic", s=1.0))
     observable: str | np.ndarray = "jx"
     branch: ClassVar[Branch] = "with_correlations"
 
@@ -213,7 +213,7 @@ class PureDephasingSolverWOC(_BasePureDephasingBranchSolver):
 @dataclass(frozen=True)
 class _BaseFortranBranchSolver:
     system: SystemParams
-    bath: BathParams = field(default_factory=lambda: BathParams(kind="ohmic"))
+    bath: BathParams = field(default_factory=lambda: BathParams(kind="ohmic", s=1.0))
     observable: str | np.ndarray = "jx"
     initial_state: np.ndarray | None = None
     numerics: NumericsConfig | None = None
