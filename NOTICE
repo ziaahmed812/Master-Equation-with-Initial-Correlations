@@ -1,4 +1,4 @@
-This repository contains new Python packaging, API, plotting, and orchestration code created during the public-release preparation of the project.
+This repository contains Python packaging, API, plotting examples, and orchestration code for master-equation workflows with initial system-environment correlations.
 
 It also packages curated scientific inputs and original Fortran solver sources that are preserved for reproducibility and provenance.
 

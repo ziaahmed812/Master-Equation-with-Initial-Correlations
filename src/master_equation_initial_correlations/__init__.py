@@ -1,3 +1,5 @@
+"""Notebook-friendly solvers for master equations with initial correlations."""
+
 from ._types import (
     BathParams,
     NumericsConfig,

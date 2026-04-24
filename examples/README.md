@@ -1,31 +1,30 @@
 # Examples
 
-These scripts are written like notebook cells. They define parameters, define
-`tlist`, choose observables, call `meic.solve(...)` or `meic.exact.solve(...)`,
-and inspect in-memory arrays.
-
-The short Fortran-backed examples use quick demo numerics so they finish fast.
-For scientific production runs, increase the quadrature controls and check
-convergence. Temporary backend staging folders are cleaned automatically for
-ordinary RAM-first runs.
-
-The Fortran-backed examples require `gfortran` plus BLAS/LAPACK:
+These examples are meant to read like short notebook cells. Each script defines
+the physical parameters, builds a time grid, chooses observables, calls a
+solver, and prints a few values from the returned arrays.
 
 ```bash
-meic doctor
+python examples/exact_pure_dephasing.py
+python examples/bosonic_bath_spin_boson.py
+python examples/spin_bath.py
 ```
 
-Examples:
+The master-equation examples use small grids so they finish quickly. They are
+good for learning the API, not for declaring a calculation converged. For
+production runs, increase the numerical controls and repeat the calculation
+until the observables of interest are stable.
 
-- `exact_pure_dephasing.py`: Python-only exact pure-dephasing workflow.
-- `bosonic_bath_spin_boson.py`: bosonic bath with an Ohmic spectrum.
-- `bosonic_bath_second_moment.py`: bosonic bath with normalized `jx^2`.
-- `subohmic_bosonic_bath.py`: bosonic bath with a sub-Ohmic spectrum.
-- `superohmic_bosonic_bath.py`: bosonic bath with a super-Ohmic spectrum.
-- `spin_bath.py`: spin bath with an Ohmic spectrum.
-- `plot_paper_figure_02_pure_dephasing_N4.py`: optional matplotlib plot for
-  the paper's N=4 pure-dephasing benchmark.
+Available examples:
 
-Nothing is saved unless the script explicitly calls `result.save(...)` or
-matplotlib is asked to save a figure. Matplotlib is optional and is not a core
-package dependency.
+- `exact_pure_dephasing.py`: analytical pure dephasing, Python-only.
+- `bosonic_bath_spin_boson.py`: bosonic bath, Ohmic spectrum.
+- `bosonic_bath_second_moment.py`: normalized `"jx^2"` observable.
+- `subohmic_bosonic_bath.py`: bosonic bath, sub-Ohmic spectrum.
+- `superohmic_bosonic_bath.py`: bosonic bath, super-Ohmic spectrum.
+- `spin_bath.py`: spin bath, Ohmic spectrum.
+- `plot_paper_figure_02_pure_dephasing_N4.py`: optional matplotlib plot built
+  from solver results.
+
+The solvers do not require matplotlib. The plotting example imports matplotlib
+only because that script draws a figure.

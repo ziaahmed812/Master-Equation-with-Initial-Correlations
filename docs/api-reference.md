@@ -1,79 +1,45 @@
 # API Reference
 
-The public API is centered on two solver calls:
+This page summarizes the public objects most users need in notebooks and
+scripts.
 
 ```python
-meic.solve(...)        # master-equation workflow
-meic.exact.solve(...)  # analytical pure-dephasing workflow
+import master_equation_initial_correlations as meic
 ```
 
-Both return an in-memory `Result`.
+## Solvers
 
-## Parameters
+### `meic.solve(...)`
 
-```python
-system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
-```
-
-`N` is the public spin-size parameter; internally `J = N / 2`.
-
-```python
-bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
-bath = meic.BathParams(bath_type="bosonic", kind="subohmic", s=0.5, beta=1.0, coupling=0.05, omega_c=5.0)
-bath = meic.BathParams(bath_type="spin", kind="superohmic", s=3.0, beta=1.0, coupling=0.05, omega_c=5.0)
-```
-
-`bath_type` is either `"bosonic"` or `"spin"`. `kind` is `"ohmic"`,
-`"subohmic"`, or `"superohmic"`. Ohmic spectra use `s=1.0`; sub-Ohmic spectra
-require `0 < s < 1`; super-Ohmic spectra require `s > 1`.
-
-The implemented spectral weight is proportional to
-`coupling * omega**s * omega_c**(1-s) * exp(-omega / omega_c)`. Arbitrary
-user-defined spectral-density callables are not part of this public API yet.
-For `kind="subohmic", s=0.5`, the package preserves the paper-code convention:
-the dissipative kernel uses the legacy analytic branch and `C.dat` keeps the
-extra cutoff used in the published Mathematica/Fortran workflow.
-
-`NumericsConfig` controls the bath-integral grids used to generate coefficient
-and correlation tables:
-
-```python
-numerics = meic.NumericsConfig(
-    omega_max=800.0,
-    omega_nodes=800,
-    coefficient_time_step=0.00125,
-    correlation_tau_step=0.00125,
-)
-```
-
-`omega_max` and `omega_nodes` control the frequency quadrature. The coefficient
-time step controls the `A.dat`, `B.dat`, and `C.dat` tables. The correlation
-tau step controls the bath-correlation table used by the Fortran backend. In
-normal `meic.solve(...)` calls, the maximum time comes from `tlist`. The table
-steps are exact spacings; if a step does not divide its interval, the package
-raises `ValueError` instead of silently changing the grid.
-
-## Master-Equation Solver
+Runs the master-equation workflow.
 
 ```python
 result = meic.solve(
     system,
     bath,
     tlist=tlist,
-    e_ops=["jx", "jz"],
+    e_ops=["jx"],
     correlations="with",
-    numerics=numerics,
 )
 ```
 
-`correlations` accepts `"with"`, `"wc"`, `"without"`, or `"woc"`. The
-`bath_type` determines the physical backend: bosonic bath uses the spin-boson
-master-equation workflow, and spin bath uses the spin-environment workflow.
+Common arguments:
 
-Fortran-backed master-equation runs require a one-dimensional, strictly
-increasing, uniformly spaced `tlist` starting at `0.0`.
+- `system`: a `SystemParams` object.
+- `bath`: a `BathParams` object.
+- `tlist`: a one-dimensional, uniformly spaced NumPy array starting at `0.0`.
+- `e_ops`: one or more observables, either strings or matrices.
+- `correlations`: `"with"` or `"without"`.
+- `numerics`: optional `NumericsConfig` for convergence studies.
+- `save_density`: set `True` to include reduced density matrices in
+  `result.states`.
 
-## Exact Solver
+The master-equation solver keeps results in memory by default and writes no
+output directory unless you call `result.save(...)`.
+
+### `meic.exact.solve(...)`
+
+Runs the analytical pure-dephasing solver.
 
 ```python
 result = meic.exact.solve(
@@ -85,97 +51,171 @@ result = meic.exact.solve(
 )
 ```
 
-The exact solver is analytical, Python-only, and valid for bosonic Ohmic pure
-dephasing with `delta0=0` and `delta=0`. It accepts arbitrary finite,
-nonnegative, strictly increasing time samples.
+This solver is valid for bosonic Ohmic pure dephasing with `delta0=0` and
+`delta=0`. Its `tlist` only needs to be finite, nonnegative, strictly
+increasing, and one-dimensional.
 
-## Result
-
-```python
-result.times      # NumPy array of returned solver times
-result.expect     # list of expectation arrays in e_ops order
-result.e_data     # dict keyed by observable label
-result.states     # density matrices when requested and available
-result.as_dict()  # copy-friendly dictionary of arrays and metadata
-```
-
-Default behavior is RAM-only. Export is explicit:
+## System Parameters
 
 ```python
-result.save("my-run")
+system = meic.SystemParams(
+    N=4,
+    epsilon0=4.0,
+    epsilon=2.5,
+    delta0=0.5,
+    delta=0.5,
+)
 ```
 
-This writes expectation tables, `result_metadata.json`, and the numerical
-controls used for the run. If `result.states` is present, export also writes
-`states.npz` with `times` and `states` arrays.
+`N` sets the collective spin size through `J = N / 2`. The parameters
+`epsilon0` and `delta0` describe the preparation Hamiltonian, while `epsilon`
+and `delta` describe the Hamiltonian used during subsequent dynamics.
 
-Normal solver calls clean temporary backend staging folders before returning.
-For provenance export, request artifact retention explicitly:
+For pure dephasing, use `delta0=0.0` and `delta=0.0`.
+
+## Bath Parameters
 
 ```python
-result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], keep_artifacts=True)
-result.save("my-run-with-artifacts", include_artifacts=True)
-result.close()
+bath = meic.BathParams(
+    bath_type="bosonic",
+    kind="ohmic",
+    s=1.0,
+    beta=1.0,
+    coupling=0.05,
+    omega_c=5.0,
+)
 ```
 
-`include_artifacts=True` copies generated input tables, Fortran sources/logs,
-and provenance files. It raises an error if artifacts were not retained or are
-no longer available, and saved metadata points to the copied artifact bundle
-under the output directory. For Fortran-backed runs, `save_density=True` fills
-`result.states` with reconstructed reduced density matrices in the public
-collective-spin basis.
+`bath_type` chooses the environment:
+
+- `"bosonic"`: bosonic bath.
+- `"spin"`: spin bath.
+
+`kind` chooses the spectral class:
+
+- `"ohmic"` with `s=1.0`.
+- `"subohmic"` with `0 < s < 1`.
+- `"superohmic"` with `s > 1`.
+
+The implemented spectral weight is proportional to
+
+```text
+coupling * omega^s * omega_c^(1-s) * exp(-omega / omega_c).
+```
+
+The public API does not yet accept arbitrary user-defined spectral-density
+functions.
+
+## Initial State
+
+For master-equation runs, the initial state is generated from the joint
+thermal equilibrium state of the system and environment, followed by the
+system preparation step used in the paper.
+
+```python
+result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="with")
+```
+
+The `correlations` argument selects the dynamical branch:
+
+- `"with"` includes the initial system-environment correlation terms.
+- `"without"` runs the corresponding uncorrelated comparison.
+
+A custom reduced density matrix is not part of the public master-equation API
+yet, because it would not by itself define the joint correlations required by
+the correlated branch.
 
 ## Observables
 
-String observables are safe algebraic expressions built from dimensionless
-collective operators:
+String observables:
 
 ```python
-e_ops = ["jx", "jy", "jz", "jx^2", "jx+jy", "0.5*jx + 2*jz", "jx*jy"]
+e_ops = ["jx", "jy", "jz", "jx^2", "jx+jy", "0.5*jx + 2*jz"]
 ```
 
-Matrix observables are also accepted:
+Matrix observables:
 
 ```python
 e_ops = [meic.jx(system), meic.jz(system)]
 ```
 
-`jx^2` follows the paper normalization `4 <J_x^2> / N^2`. Non-Hermitian
-observables are allowed and produce a warning because complex expectation
-values may be expected. Custom matrix observables must follow the same
-dimensionless convention as the string observables: pass `J_x / J`, not the
-physical matrix `J_x`, when you want `"jx"` normalization.
+The built-in operators are dimensionless:
 
-For Fortran-backed master-equation runs, each observable currently triggers a
-separate numerical run. Multi-observable calls are therefore more expensive
-than single-observable calls.
-
-## Initial States
-
-For master-equation workflows, the default initial state is the reduced system
-density matrix generated from the correlated joint equilibrium state of the
-system and bath. This is the initial-state construction used in the paper:
-`SystemParams`, `BathParams`, and the initial-state quadrature controls in
-`NumericsConfig` determine the generated reduced density matrix.
-
-```python
-result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"])
+```text
+jx = J_x / J
+jy = J_y / J
+jz = J_z / J
 ```
 
-The call above uses the generated correlated-equilibrium reduced system state.
-The `correlations` argument selects the dynamical branch:
+The string `"jx^2"` returns the paper-normalized second moment
+`4 <J_x^2> / N^2`. If you pass a custom matrix and want the same convention,
+pass the dimensionless operator rather than the unscaled physical spin matrix.
 
-- `"with"` keeps the initial system-bath correlation terms.
-- `"without"` runs the corresponding uncorrelated comparison branch.
+For master-equation runs, each observable is evaluated by its own backend run.
+This is simple and explicit, but multi-observable calls can be slower.
 
-The public master-equation API does not accept a custom `initial_state` yet. A
-custom reduced density matrix alone would not define the joint system-bath
-correlations in the `correlations="with"` branch, so the public solver keeps
-the preparation protocol tied to the paper's correlated-equilibrium
-construction.
+## Result Objects
 
-The exact pure-dephasing solver uses its analytical correlated or uncorrelated
-construction and does not accept a custom initial state.
+```python
+result.times
+result.expect
+result.e_data
+result.states
+```
 
-Ordinary notebook use should start with `meic.solve(...)` for master-equation
-runs or `meic.exact.solve(...)` for analytical pure dephasing.
+- `times` is the returned time grid.
+- `expect` is a list of expectation arrays in the same order as `e_ops`.
+- `e_data` maps observable labels to arrays.
+- `states` contains density matrices when `save_density=True`.
+
+Convenience helpers:
+
+```python
+data = result.as_dict()
+df = result.to_dataframe()
+```
+
+`to_dataframe()` requires pandas to be installed by the user.
+
+## Saving Results
+
+Results stay in memory unless you explicitly save them:
+
+```python
+result.save("my-run")
+```
+
+The output directory contains text expectation tables and
+`result_metadata.json`. If `result.states` is available, `states.npz` is also
+written.
+
+By default, the solver does not keep backend working files. To export those
+advanced files as well:
+
+```python
+result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], keep_artifacts=True)
+result.save("my-run-with-artifacts", include_artifacts=True)
+```
+
+Use this only when you want to inspect coefficient tables, generated inputs,
+Fortran sources, or logs. Normal notebook workflows do not need it.
+
+## Numerical Controls
+
+```python
+numerics = meic.NumericsConfig(
+    omega_max=800.0,
+    omega_nodes=800,
+    coefficient_time_step=0.00125,
+    correlation_tau_step=0.00125,
+)
+```
+
+`omega_max` and `omega_nodes` control the frequency quadrature. The time-step
+settings control the generated coefficient and bath-correlation tables used by
+the backend. The requested table steps must divide their intervals exactly;
+otherwise the package raises `ValueError`.
+
+For ordinary `meic.solve(...)` calls, the physical time window comes from
+`tlist`. Increase quadrature cutoffs, node counts, and table resolution when
+checking convergence away from the paper benchmark regimes.
