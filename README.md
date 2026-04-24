@@ -213,6 +213,10 @@ No output folder is written unless you ask for one:
 result.save("my-run")
 ```
 
+The saved bundle contains `expect-*.dat`, `result_metadata.json`, and the
+numerical controls that defined the run. If density matrices were requested,
+`states.npz` is also written with `times` and `states` arrays.
+
 Normal solver calls clean temporary backend staging folders before returning.
 If you want generated coefficient, bath-correlation, initial-state,
 observable, Fortran-source, and log files for provenance, request them
@@ -224,6 +228,8 @@ result.save("my-run-with-artifacts", include_artifacts=True)
 result.close()
 ```
 
+In that artifact-retention workflow, metadata paths point to the copied
+`my-run-with-artifacts/artifacts/...` bundle, not to temporary backend folders.
 `result.close()` is only needed for this advanced artifact-retention workflow.
 If `save_density=True`, `result.states` contains the reconstructed reduced
 system density matrices in the public collective-spin basis.
@@ -252,6 +258,10 @@ window. `NumericsConfig` controls how finely the coefficient and bath
 correlation tables are generated inside that window. Advanced users can also
 set separate cutoffs such as `correlation_omega_max`,
 `initial_state_omega_max`, or initial-state quadrature nodes.
+
+`coefficient_time_step` and `correlation_tau_step` are exact table spacings:
+the chosen step must divide the configured interval. The package raises a clear
+error rather than silently changing the grid.
 
 The Fortran-backed master-equation solver requires a one-dimensional, strictly
 increasing, uniformly spaced `tlist` starting at `0.0`. The analytical

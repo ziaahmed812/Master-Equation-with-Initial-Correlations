@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import replace
 import importlib.util
 import inspect
 import json
@@ -14,7 +15,7 @@ from master_equation_initial_correlations import (
     doctor,
 )
 from master_equation_initial_correlations._types import SimulationParams
-from master_equation_initial_correlations.blackbox import BosonicBathSolverWC
+from master_equation_initial_correlations.blackbox import BosonicBathSolverWC, _numerics_from_tlist
 from master_equation_initial_correlations.simulation import run_simulation
 
 
@@ -204,8 +205,11 @@ def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
     metadata = json.loads((destination / "result_metadata.json").read_text())
     assert metadata["observables"] == ["jx", "jz"]
     assert set(metadata["parameters_by_observable"]) == {"jx", "jz"}
-    assert "multiple observables" in metadata["parameters"]["note"]
+    assert metadata["parameters"]["observables"] == ["jx", "jz"]
+    assert metadata["parameters"]["model"] == "pure-dephasing"
+    assert metadata["parameters"]["exact_parameters"]["J"] == 0.5
     assert metadata["metadata"]["initial_state"]["custom_initial_state_supported"] is False
+    assert metadata["numerics"] is None
     assert result.as_dict()["expect"]["jx"].shape == result.times.shape
     if importlib.util.find_spec("pandas") is None:
         with pytest.raises(ImportError, match="requires pandas"):
@@ -216,6 +220,14 @@ def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
         result.save(destination)
     with pytest.raises(FileNotFoundError, match="no retained artifacts"):
         result.save(tmp_path / "no-artifacts", include_artifacts=True)
+
+    state_result = meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.2, 3), e_ops=["jx"], store_states=True)
+    state_destination = state_result.save(tmp_path / "saved-states")
+    state_metadata = json.loads((state_destination / "result_metadata.json").read_text())
+    assert state_metadata["states"]["path"].endswith("states.npz")
+    stored = np.load(state_destination / "states.npz")
+    np.testing.assert_allclose(stored["times"], state_result.times)
+    assert stored["states"].shape == state_result.states.shape
 
 
 def test_result_save_overwrite_removes_stale_generated_files(tmp_path: Path) -> None:
@@ -233,7 +245,7 @@ def test_result_save_overwrite_removes_stale_generated_files(tmp_path: Path) -> 
     assert not (destination / "expect-jz.dat").exists()
     assert (destination / "notes.txt").read_text() == "user file"
     metadata = json.loads((destination / "result_metadata.json").read_text())
-    assert metadata["parameters"]["J"] == 0.5
+    assert metadata["parameters"]["exact_parameters"]["J"] == 0.5
     assert isinstance(metadata["metadata"]["system"], dict)
 
 
@@ -267,6 +279,14 @@ def test_public_master_equation_rejects_custom_initial_state() -> None:
         meic.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=["jx"], initial_state=rho0)
 
 
+def test_public_tlist_overrides_backend_timing_controls() -> None:
+    user_numerics = replace(FAST_NUMERICS, fortran_t_final=10.0)
+    effective = _numerics_from_tlist(user_numerics, dt=0.01, t_final=0.05)
+    assert effective.fortran_dt == pytest.approx(0.01)
+    assert effective.fortran_t_final == pytest.approx(0.06)
+    assert effective.coefficient_t_max == pytest.approx(0.06000000000001)
+
+
 def test_bath_params_are_keyword_only() -> None:
     with pytest.raises(TypeError):
         BathParams("ohmic")
@@ -274,6 +294,7 @@ def test_bath_params_are_keyword_only() -> None:
 
 def test_public_api_does_not_export_internal_solver_classes() -> None:
     assert not hasattr(meic, "BosonicBathSolverWC")
+    assert not hasattr(meic, "QuadratureConfig")
     assert "initial_state" not in inspect.signature(meic.solve).parameters
     signature = inspect.signature(BosonicBathSolverWC)
     assert "branch" not in signature.parameters
@@ -382,7 +403,11 @@ def test_blackbox_fortran_solver_returns_arrays_and_saves_artifacts(tmp_path: Pa
     saved = wc_with_artifacts.save(tmp_path / "saved-fortran", include_artifacts=True)
     assert (saved / "expect-jx.dat").exists()
     assert (saved / "artifacts" / "jx" / "A.dat").exists()
+    metadata = json.loads((saved / "result_metadata.json").read_text())
+    assert metadata["numerics"]["fortran_t_final"] == pytest.approx(0.06)
+    assert metadata["artifacts_available"]["jx"].endswith("artifacts/jx")
     wc_with_artifacts.close()
+    assert Path(metadata["artifacts_available"]["jx"]).exists()
     with pytest.raises(FileNotFoundError, match="keep_artifacts=True"):
         wc_with_artifacts.save(tmp_path / "after-close", include_artifacts=True)
 

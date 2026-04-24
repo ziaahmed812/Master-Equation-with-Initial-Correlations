@@ -116,7 +116,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_parser = sub.add_parser("run", help="Run a solver and explicitly save the result.")
     run_parser.add_argument("--bath-type", choices=("bosonic", "spin"), default="bosonic")
-    run_parser.add_argument("--model", choices=("pure-dephasing", "spin-boson", "spin-environment"), default="spin-boson")
+    run_parser.add_argument("--model", choices=("auto", "pure-dephasing", "spin-boson", "spin-environment"), default="auto")
     run_parser.add_argument("--branch", choices=("wc", "woc"), default="wc", help="wc means with correlations; woc means without correlations.")
     run_parser.add_argument("--spectral", choices=("ohmic", "subohmic", "superohmic"), default="ohmic")
     run_parser.add_argument("--observable", default="jx", help="Observable expression, for example jx, jy, jz, jx^2, or jx+jy.")

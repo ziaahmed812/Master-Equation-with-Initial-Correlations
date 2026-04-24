@@ -62,7 +62,7 @@ def _validate_exact_tlist(tlist: Any) -> np.ndarray:
 
 
 def _numerics_from_tlist(numerics: NumericsConfig | None, *, dt: float, t_final: float) -> NumericsConfig:
-    base = validate_numerics(numerics)
+    base = numerics if numerics is not None else validate_numerics(None)
     # The Fortran loop writes while T < TFINAL, so use one internal
     # sentinel step beyond the requested public endpoint.
     internal_t_final = t_final + dt
@@ -75,6 +75,30 @@ def _numerics_from_tlist(numerics: NumericsConfig | None, *, dt: float, t_final:
             fortran_t_final=internal_t_final,
         )
     )
+
+
+def _run_parameters(
+    *,
+    system: SystemParams,
+    bath: BathParams,
+    model: str,
+    branch: str,
+    observables: list[str],
+    exact_parameters: PureDephasingParams | None = None,
+    initial_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "system": system,
+        "bath": bath,
+        "model": model,
+        "branch": branch,
+        "observables": list(observables),
+    }
+    if exact_parameters is not None:
+        payload["exact_parameters"] = exact_parameters
+    if initial_state is not None:
+        payload["initial_state"] = initial_state
+    return payload
 
 
 def _normalize_e_ops(e_ops: Any) -> tuple[list[Any], list[str], dict[str, int]]:
@@ -221,7 +245,18 @@ class _BasePureDephasingBranchSolver:
             expect=expect,
             e_data=e_data,
             states=states if store_states else None,
-            params=params,
+            params=_run_parameters(
+                system=system,
+                bath=bath,
+                model="pure-dephasing",
+                branch=self.branch,
+                observables=labels,
+                exact_parameters=params,
+                initial_state={
+                    "source": "analytical_correlated_or_uncorrelated_pure_dephasing_construction",
+                    "custom_initial_state_supported": False,
+                },
+            ),
             branch=self.branch,
             solver=self.__class__.__name__,
             e_ops=labels,
@@ -324,20 +359,32 @@ class _BaseFortranBranchSolver:
             artifacts[label] = result.output_dir
 
         e_data = {label: expect[index] for label, index in label_index.items()}
-        params = _simulation_params(
-            bath_type=self.bath_type,
-            model=self.model,
-            system=self.system,
-            bath=self.bath,
-            observable=observables[0],
-            initial_state=self.initial_state,
-        )
+        initial_state_metadata = {
+            "source": (
+                "user_supplied_reduced_system_density_matrix"
+                if self.initial_state is not None
+                else "generated_from_correlated_joint_system_bath_equilibrium"
+            ),
+            "shape": (
+                list(np.asarray(self.initial_state).shape)
+                if self.initial_state is not None
+                else [system.N + 1, system.N + 1]
+            ),
+            "custom_joint_state": False,
+        }
         result = Result(
             times=raw_times if raw_times is not None else times,
             expect=expect,
             e_data=e_data,
             states=states,
-            params=params,
+            params=_run_parameters(
+                system=system,
+                bath=bath,
+                model=self.model,
+                branch=self.branch,
+                observables=labels,
+                initial_state=initial_state_metadata,
+            ),
             branch=self.branch,
             solver=self.__class__.__name__,
             e_ops=labels,
@@ -347,19 +394,7 @@ class _BaseFortranBranchSolver:
             metadata={
                 "system": system,
                 "bath": bath,
-                "initial_state": {
-                    "source": (
-                        "user_supplied_reduced_system_density_matrix"
-                        if self.initial_state is not None
-                        else "generated_from_correlated_joint_system_bath_equilibrium"
-                    ),
-                    "shape": (
-                        list(np.asarray(self.initial_state).shape)
-                        if self.initial_state is not None
-                        else [system.N + 1, system.N + 1]
-                    ),
-                    "custom_joint_state": False,
-                },
+                "initial_state": initial_state_metadata,
                 "observables": labels,
                 "observable_parameters": [
                     _simulation_params(

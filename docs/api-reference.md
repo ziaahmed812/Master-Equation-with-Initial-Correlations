@@ -49,7 +49,9 @@ numerics = meic.NumericsConfig(
 `omega_max` and `omega_nodes` control the frequency quadrature. The coefficient
 time step controls the `A.dat`, `B.dat`, and `C.dat` tables. The correlation
 tau step controls the bath-correlation table used by the Fortran backend. In
-normal `meic.solve(...)` calls, the maximum time comes from `tlist`.
+normal `meic.solve(...)` calls, the maximum time comes from `tlist`. The table
+steps are exact spacings; if a step does not divide its interval, the package
+raises `ValueError` instead of silently changing the grid.
 
 ## Master-Equation Solver
 
@@ -103,6 +105,10 @@ Default behavior is RAM-only. Export is explicit:
 result.save("my-run")
 ```
 
+This writes expectation tables, `result_metadata.json`, and the numerical
+controls used for the run. If `result.states` is present, export also writes
+`states.npz` with `times` and `states` arrays.
+
 Normal solver calls clean temporary backend staging folders before returning.
 For provenance export, request artifact retention explicitly:
 
@@ -114,7 +120,8 @@ result.close()
 
 `include_artifacts=True` copies generated input tables, Fortran sources/logs,
 and provenance files. It raises an error if artifacts were not retained or are
-no longer available. For Fortran-backed runs, `save_density=True` fills
+no longer available, and saved metadata points to the copied artifact bundle
+under the output directory. For Fortran-backed runs, `save_density=True` fills
 `result.states` with reconstructed reduced density matrices in the public
 collective-spin basis.
 

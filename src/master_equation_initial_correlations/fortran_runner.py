@@ -64,6 +64,17 @@ RERUN_OUTPUTS = (
 )
 
 
+@dataclass(frozen=True)
+class _GeneratedBranchRun:
+    branch: str
+    run_dir: Path
+    output_files: dict[str, Path]
+    source_files: dict[str, Path]
+    log_files: dict[str, Path]
+    input_files: dict[str, Path]
+    metadata: dict[str, object]
+
+
 def _default_link_args() -> tuple[str, ...]:
     explicit = (
         "/lib/x86_64-linux-gnu/liblapack.so.3",
@@ -734,37 +745,15 @@ def _copy_public_branch_sources_and_logs(run_dir: Path, output_dir: Path, branch
     return source_files, log_files
 
 
-def run_parameterized_fortran_branch(
+def _write_branch_public_outputs(
     params: SimulationParams,
-    output_dir: str | Path,
+    run_dir: Path,
+    output_dir: Path,
     *,
     branch: str,
-    overwrite: bool = False,
-    verbose: bool = True,
-    save_density: bool = False,
-    numerics: NumericsConfig | None = None,
-) -> RerunResult:
-    params = normalize_simulation_params(params)
-    if branch not in {"correlated", "uncorrelated"}:
-        raise ValueError("branch must be 'correlated' or 'uncorrelated'.")
-    numerics = validate_numerics(numerics)
-    config = _build_config()
-    compiler_path = shutil.which(config.compiler)
-    if compiler_path is None:
-        raise RuntimeError(f"Fortran compiler {config.compiler!r} was not found. Run `meic doctor` for details.")
-
-    output_dir = Path(output_dir)
-    prepare_output_dir(output_dir, overwrite=overwrite, generated_names=RERUN_OUTPUTS)
-
-    run_dir = _stage_generated_branch(params, branch, output_dir, numerics, save_density=save_density)
-    _emit(f"[meic] raw {branch} run directory: {run_dir}", verbose=verbose)
-    generated_inputs = write_generated_input_files(params, run_dir, numerics)
-    generated_inputs["OBSERVABLE.dat"] = _write_observable_input(params, run_dir)
-    _emit("[meic] generated coefficient, correlation, initial-state, and observable input files", verbose=verbose)
-
-    _emit(f"[meic] compiling/running {branch} Fortran branch", verbose=verbose)
-    branch_meta = _compile_and_run(run_dir, branch, config)
-
+    numerics: NumericsConfig,
+    save_density: bool,
+) -> dict[str, Path]:
     observable_src = run_dir / _observable_output_name(branch)
     public_name = "observable-correlated.dat" if branch == "correlated" else "observable-uncorrelated.dat"
     public_key = "correlated" if branch == "correlated" else "uncorrelated"
@@ -810,7 +799,10 @@ def run_parameterized_fortran_branch(
             columns="t followed by row-major real/imag pairs for the reduced system density matrix",
             numerics=numerics,
         )
+    return output_files
 
+
+def _copy_public_inputs(params: SimulationParams, run_dir: Path, output_dir: Path, *, numerics: NumericsConfig) -> dict[str, Path]:
     input_files: dict[str, Path] = {}
     for input_name in ("A.dat", "B.dat", "C.dat", "integraldatasimpson.dat", "bathcorrelation.dat", "INSTATE.dat", "OBSERVABLE.dat"):
         input_files[input_name] = _copy_generated_text_with_header(
@@ -827,7 +819,82 @@ def run_parameterized_fortran_branch(
         columns="Fortran run constants: delta, epsilon, coupling, beta, omega_c, dtau, dt, cutoff, t_final, save_density",
         numerics=numerics,
     )
+    return input_files
+
+
+def _run_generated_branch(
+    params: SimulationParams,
+    output_dir: Path,
+    *,
+    branch: str,
+    numerics: NumericsConfig,
+    save_density: bool,
+    config: FortranBuildConfig,
+    verbose: bool,
+    input_files: dict[str, Path] | None = None,
+) -> _GeneratedBranchRun:
+    run_dir = _stage_generated_branch(params, branch, output_dir, numerics, save_density=save_density)
+    _emit(f"[meic] raw {branch} run directory: {run_dir}", verbose=verbose)
+    if input_files is None:
+        branch_inputs = write_generated_input_files(params, run_dir, numerics)
+        branch_inputs["OBSERVABLE.dat"] = _write_observable_input(params, run_dir)
+    else:
+        branch_inputs = _copy_generated_inputs_to_branch(input_files, run_dir)
+    _emit(f"[meic] compiling/running {branch} Fortran branch", verbose=verbose)
+    branch_meta = _compile_and_run(run_dir, branch, config)
+    output_files = _write_branch_public_outputs(
+        params,
+        run_dir,
+        output_dir,
+        branch=branch,
+        numerics=numerics,
+        save_density=save_density,
+    )
     source_files, log_files = _copy_public_branch_sources_and_logs(run_dir, output_dir, branch)
+    return _GeneratedBranchRun(
+        branch=branch,
+        run_dir=run_dir,
+        output_files=output_files,
+        source_files=source_files,
+        log_files=log_files,
+        input_files=branch_inputs,
+        metadata=branch_meta,
+    )
+
+
+def run_parameterized_fortran_branch(
+    params: SimulationParams,
+    output_dir: str | Path,
+    *,
+    branch: str,
+    overwrite: bool = False,
+    verbose: bool = True,
+    save_density: bool = False,
+    numerics: NumericsConfig | None = None,
+) -> RerunResult:
+    params = normalize_simulation_params(params)
+    if branch not in {"correlated", "uncorrelated"}:
+        raise ValueError("branch must be 'correlated' or 'uncorrelated'.")
+    numerics = validate_numerics(numerics)
+    config = _build_config()
+    compiler_path = shutil.which(config.compiler)
+    if compiler_path is None:
+        raise RuntimeError(f"Fortran compiler {config.compiler!r} was not found. Run `meic doctor` for details.")
+
+    output_dir = Path(output_dir)
+    prepare_output_dir(output_dir, overwrite=overwrite, generated_names=RERUN_OUTPUTS)
+
+    _emit("[meic] generated coefficient, correlation, initial-state, and observable input files", verbose=verbose)
+    generated = _run_generated_branch(
+        params,
+        output_dir,
+        branch=branch,
+        numerics=numerics,
+        save_density=save_density,
+        config=config,
+        verbose=verbose,
+    )
+    input_files = _copy_public_inputs(params, generated.run_dir, output_dir, numerics=numerics)
 
     summary = {
         "input_mode": "generated",
@@ -839,13 +906,13 @@ def run_parameterized_fortran_branch(
         "fortran": {
             "template_solver": _template_solver_id(params),
             "save_density": save_density,
-            branch: branch_meta,
+            branch: generated.metadata,
             "verification_performed": False,
         },
-        "public_outputs": {key: str(path) for key, path in output_files.items()},
+        "public_outputs": {key: str(path) for key, path in generated.output_files.items()},
         "public_inputs": {key: str(path) for key, path in input_files.items()},
-        "public_sources": {key: str(path) for key, path in source_files.items()},
-        "logs": {key: str(path) for key, path in log_files.items()},
+        "public_sources": {key: str(path) for key, path in generated.source_files.items()},
+        "logs": {key: str(path) for key, path in generated.log_files.items()},
     }
     summary_path = output_dir / "regeneration_summary.json"
     write_json(summary_path, summary)
@@ -859,10 +926,10 @@ def run_parameterized_fortran_branch(
         jz_uncorrelated_error=None,
         summary_path=summary_path,
         verification_performed=False,
-        output_files=output_files,
+        output_files=generated.output_files,
         input_files=input_files,
-        source_files=source_files,
-        log_files=log_files,
+        source_files=generated.source_files,
+        log_files=generated.log_files,
     )
 
 
@@ -887,19 +954,28 @@ def run_parameterized_fortran(
     output_dir = Path(output_dir)
     prepare_output_dir(output_dir, overwrite=overwrite, generated_names=RERUN_OUTPUTS)
 
-    correlated_dir = _stage_generated_branch(params, "correlated", output_dir, numerics, save_density=save_density)
-    uncorrelated_dir = _stage_generated_branch(params, "uncorrelated", output_dir, numerics, save_density=save_density)
-    _emit(f"[meic] raw correlated run directory: {correlated_dir}", verbose=verbose)
-    _emit(f"[meic] raw uncorrelated run directory: {uncorrelated_dir}", verbose=verbose)
-    generated_inputs = write_generated_input_files(params, correlated_dir, numerics)
-    generated_inputs["OBSERVABLE.dat"] = _write_observable_input(params, correlated_dir)
-    _copy_generated_inputs_to_branch(generated_inputs, uncorrelated_dir)
     _emit("[meic] generated coefficient, correlation, initial-state, and observable input files", verbose=verbose)
-
-    _emit("[meic] compiling/running correlated Fortran branch", verbose=verbose)
-    correlated_meta = _compile_and_run(correlated_dir, "correlated", config)
-    _emit("[meic] compiling/running uncorrelated Fortran branch", verbose=verbose)
-    uncorrelated_meta = _compile_and_run(uncorrelated_dir, "uncorrelated", config)
+    correlated_run = _run_generated_branch(
+        params,
+        output_dir,
+        branch="correlated",
+        numerics=numerics,
+        save_density=save_density,
+        config=config,
+        verbose=verbose,
+    )
+    uncorrelated_run = _run_generated_branch(
+        params,
+        output_dir,
+        branch="uncorrelated",
+        numerics=numerics,
+        save_density=save_density,
+        config=config,
+        verbose=verbose,
+        input_files=correlated_run.input_files,
+    )
+    correlated_dir = correlated_run.run_dir
+    uncorrelated_dir = uncorrelated_run.run_dir
 
     correlated, _ = _observable_table_for_public(correlated_dir / "OBSERVABLE-C.DAT")
     uncorrelated, _ = _observable_table_for_public(uncorrelated_dir / "OBSERVABLE-UNC.DAT")
@@ -923,96 +999,10 @@ def run_parameterized_fortran(
         jz_reference = load_table(f"{example.asset_dir}/tables/EXPZ-UNC.DAT")
         jz_uncorrelated_error = _max_abs(jz_uncorrelated, jz_reference)
 
-    output_files = {
-        "correlated": _write_observable_public_table(
-            params,
-            correlated_dir / "OBSERVABLE-C.DAT",
-            output_dir / "observable-correlated.dat",
-            branch="correlated",
-            numerics=numerics,
-        ),
-        "uncorrelated": _write_observable_public_table(
-            params,
-            uncorrelated_dir / "OBSERVABLE-UNC.DAT",
-            output_dir / "observable-uncorrelated.dat",
-            branch="uncorrelated",
-            numerics=numerics,
-        ),
-    }
-    observable_expression = normalize_observable_expression(params.observable)
-    if observable_expression == "jx" and (correlated_dir / "EXPX-C.DAT").exists():
-        output_files["legacy_jx_correlated"] = _write_generated_public_table(
-            params,
-            correlated_dir / "EXPX-C.DAT",
-            output_dir / "EXPX-C.DAT",
-            branch="correlated",
-            columns="t legacy_jx_correlated",
-            numerics=numerics,
-        )
-    if observable_expression == "jx" and (uncorrelated_dir / "EXPX-UNC.DAT").exists():
-        output_files["legacy_jx_uncorrelated"] = _write_generated_public_table(
-            params,
-            uncorrelated_dir / "EXPX-UNC.DAT",
-            output_dir / "EXPX-UNC.DAT",
-            branch="uncorrelated",
-            columns="t legacy_jx_uncorrelated",
-            numerics=numerics,
-        )
-    if observable_expression == "jz" and (correlated_dir / "EXPZ-C.DAT").exists():
-        output_files["jz_correlated"] = _write_generated_public_table(
-            params,
-            correlated_dir / "EXPZ-C.DAT",
-            output_dir / "EXPZ-C.DAT",
-            branch="correlated",
-            columns="t jz_correlated",
-            numerics=numerics,
-        )
-    if observable_expression == "jz" and (uncorrelated_dir / "EXPZ-UNC.DAT").exists():
-        output_files["jz_uncorrelated"] = _write_generated_public_table(
-            params,
-            uncorrelated_dir / "EXPZ-UNC.DAT",
-            output_dir / "EXPZ-UNC.DAT",
-            branch="uncorrelated",
-            columns="t jz_uncorrelated",
-            numerics=numerics,
-        )
-
-    input_files: dict[str, Path] = {}
-    if save_density:
-        output_files["density_correlated"] = _copy_generated_text_with_header(
-            params,
-            correlated_dir / "density-correlated.dat",
-            output_dir / "density-correlated.dat",
-            columns="t followed by row-major real/imag pairs for the reduced system density matrix",
-            numerics=numerics,
-        )
-        output_files["density_uncorrelated"] = _copy_generated_text_with_header(
-            params,
-            uncorrelated_dir / "density-uncorrelated.dat",
-            output_dir / "density-uncorrelated.dat",
-            columns="t followed by row-major real/imag pairs for the reduced system density matrix",
-            numerics=numerics,
-        )
-
-    for input_name in ("A.dat", "B.dat", "C.dat", "integraldatasimpson.dat", "bathcorrelation.dat", "INSTATE.dat", "OBSERVABLE.dat"):
-        input_files[input_name] = _copy_generated_text_with_header(
-            params,
-            correlated_dir / input_name,
-            output_dir / input_name,
-            columns=_input_file_columns(params, input_name),
-            numerics=numerics,
-        )
-    input_files["params.in"] = _copy_generated_text_with_header(
-        params,
-        correlated_dir / "params.in",
-        output_dir / "params.in",
-        columns="Fortran run constants: delta, epsilon, coupling, beta, omega_c, dtau, dt, cutoff, t_final, save_density",
-        numerics=numerics,
-    )
-
-    source_files, log_files = _copy_public_sources_and_logs(correlated_dir, uncorrelated_dir, output_dir)
-    source_files["dimensions_include"] = output_dir / "sources" / "dimensions.inc"
-    shutil.copy2(correlated_dir / "dimensions.inc", source_files["dimensions_include"])
+    output_files = {**correlated_run.output_files, **uncorrelated_run.output_files}
+    input_files = _copy_public_inputs(params, correlated_dir, output_dir, numerics=numerics)
+    source_files = {**correlated_run.source_files, **uncorrelated_run.source_files}
+    log_files = {**correlated_run.log_files, **uncorrelated_run.log_files}
 
     summary = {
         "input_mode": "generated",
@@ -1024,8 +1014,8 @@ def run_parameterized_fortran(
         "fortran": {
             "template_solver": _template_solver_id(params),
             "save_density": save_density,
-            "correlated": {**correlated_meta, "max_abs_error": correlated_error},
-            "uncorrelated": {**uncorrelated_meta, "max_abs_error": uncorrelated_error},
+            "correlated": {**correlated_run.metadata, "max_abs_error": correlated_error},
+            "uncorrelated": {**uncorrelated_run.metadata, "max_abs_error": uncorrelated_error},
             "jz_correlated_error": jz_correlated_error,
             "jz_uncorrelated_error": jz_uncorrelated_error,
             "verification_performed": verification_performed,

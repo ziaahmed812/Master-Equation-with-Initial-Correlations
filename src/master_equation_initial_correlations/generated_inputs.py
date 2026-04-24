@@ -35,6 +35,26 @@ def _positive_int(value: int, name: str) -> int:
     return int(value)
 
 
+def _finite_float(value: float, name: str) -> float:
+    number = float(value)
+    if not np.isfinite(number):
+        raise ValueError(f"{name} must be finite.")
+    return number
+
+
+def _validate_exact_step(t_min: float, t_max: float, step: float, label: str) -> None:
+    interval = t_max - t_min
+    intervals = interval / step
+    rounded = round(intervals)
+    if rounded < 1:
+        raise ValueError(f"{label} step must produce at least two grid points.")
+    if not np.isclose(intervals, rounded, rtol=1.0e-10, atol=1.0e-10):
+        raise ValueError(
+            f"{label} step must exactly divide max-min; got interval={interval:g}, "
+            f"step={step:g}, interval/step={intervals:g}."
+        )
+
+
 def validate_numerics(numerics: NumericsConfig | None) -> NumericsConfig:
     config = DEFAULT_NUMERICS if numerics is None else numerics
     for name in (
@@ -45,13 +65,29 @@ def validate_numerics(numerics: NumericsConfig | None) -> NumericsConfig:
         "initial_state_zeta_nodes",
     ):
         _positive_int(getattr(config, name), name)
+    for name in (
+        "omega_max",
+        "coefficient_omega_max",
+        "correlation_omega_max",
+        "initial_state_omega_max",
+        "coefficient_omega_min",
+        "correlation_omega_min",
+        "initial_state_omega_min",
+        "coefficient_time_step",
+        "correlation_tau_step",
+        "coefficient_t_min",
+        "coefficient_t_max",
+        "correlation_tau_min",
+        "correlation_tau_max",
+        "fortran_dtau",
+        "fortran_dt",
+        "fortran_cutoff",
+        "fortran_t_final",
+    ):
+        _finite_float(getattr(config, name), name)
     for name in ("coefficient_time_step", "correlation_tau_step"):
-        if getattr(config, name) <= 0:
+        if getattr(config, name) <= 0.0:
             raise ValueError(f"{name} must be positive.")
-    if config.coefficient_points < 2:
-        raise ValueError("coefficient_time_step must produce at least two coefficient grid points.")
-    if config.tau_points < 2:
-        raise ValueError("correlation_tau_step must produce at least two correlation grid points.")
     for lower, upper, label in (
         (config.omega_min_coefficients, config.omega_max_coefficients, "coefficient omega grid"),
         (config.omega_min_tau, config.omega_max_tau, "tau omega grid"),
@@ -61,6 +97,12 @@ def validate_numerics(numerics: NumericsConfig | None) -> NumericsConfig:
     ):
         if lower < 0 or upper <= lower:
             raise ValueError(f"{label} requires 0 <= min < max.")
+    _validate_exact_step(config.coefficient_t_min, config.coefficient_t_max, config.coefficient_time_step, "coefficient time grid")
+    _validate_exact_step(config.tau_t_min, config.tau_t_max, config.correlation_tau_step, "bath-correlation tau grid")
+    if config.coefficient_points < 2:
+        raise ValueError("coefficient_time_step must produce at least two coefficient grid points.")
+    if config.tau_points < 2:
+        raise ValueError("correlation_tau_step must produce at least two correlation grid points.")
     for name in ("fortran_dtau", "fortran_dt", "fortran_cutoff", "fortran_t_final"):
         if getattr(config, name) <= 0:
             raise ValueError(f"{name} must be positive.")

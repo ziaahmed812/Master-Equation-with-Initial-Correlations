@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+import pytest
+
+from master_equation_initial_correlations import doctor
 from master_equation_initial_correlations.cli import main
 
 
@@ -67,3 +70,28 @@ def test_cli_rejects_incompatible_bath_model(capsys) -> None:
     captured = capsys.readouterr()
     assert code == 2
     assert "spin-environment" in captured.err
+
+
+@pytest.mark.solver_rerun
+def test_cli_auto_model_routes_spin_bath(tmp_path: Path, capsys) -> None:
+    if not doctor()["compiler_found"]:
+        pytest.skip("gfortran not available")
+    code = main([
+        "run",
+        "--bath-type", "spin",
+        "--N", "2",
+        "--tmax", "0.01",
+        "--dt", "0.01",
+        "--omega-nodes", "8",
+        "--lambda-nodes", "4",
+        "--initial-state-omega-nodes", "4",
+        "--initial-state-lambda-nodes", "3",
+        "--initial-state-zeta-nodes", "3",
+        "--out", str(tmp_path),
+        "--quiet",
+    ])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert code == 0
+    assert payload["solver"] == "SpinBathSolverWC"
+    assert (tmp_path / "expect-jx.dat").exists()

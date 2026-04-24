@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 
 from ._resources import write_table
+from .generated_inputs import numerics_summary
 from .observables import normalize_observable_expression
 
 
@@ -80,9 +81,11 @@ class Result:
             "times": self.times.copy(),
             "expect": {label: np.asarray(values).copy() for label, values in zip(self.e_ops, self.expect)},
             "states": None if self.states is None else self.states.copy(),
+            "params": _json_ready(self.params),
             "branch": self.branch,
             "solver": self.solver,
             "observables": list(self.e_ops),
+            "numerics": None if self.numerics is None else numerics_summary(self.numerics),
             "metadata": dict(self.metadata),
         }
 
@@ -121,6 +124,9 @@ class Result:
             metadata_path = destination / "result_metadata.json"
             if metadata_path.exists():
                 generated_targets.append(metadata_path)
+            states_path = destination / "states.npz"
+            if states_path.exists():
+                generated_targets.append(states_path)
             artifact_root = destination / "artifacts"
             if artifact_root.exists():
                 generated_targets.append(artifact_root)
@@ -151,20 +157,40 @@ class Result:
             ]
             write_table(destination / f"expect-{_safe_name(label)}.dat", table, header_lines=header)
 
+        states_metadata: dict[str, Any] | None = None
+        if self.states is not None:
+            states_path = destination / "states.npz"
+            np.savez_compressed(states_path, times=self.times, states=self.states)
+            states_metadata = {
+                "path": str(states_path),
+                "shape": list(np.asarray(self.states).shape),
+                "format": "numpy npz with arrays 'times' and 'states'",
+            }
+
         observable_parameters = self.metadata.get("observable_parameters")
         if observable_parameters is None:
-            parameters_by_observable = {self.e_ops[0]: _json_ready(self.params)} if self.e_ops else {}
+            parameters_by_observable = {}
         else:
             parameters_by_observable = {
                 label: _json_ready(params)
                 for label, params in zip(self.e_ops, observable_parameters)
             }
         parameters = _json_ready(self.params)
-        if len(self.e_ops) > 1:
-            parameters = {
-                "note": "multiple observables were calculated; see parameters_by_observable for observable-specific provenance",
-                "first_observable": parameters,
-            }
+
+        artifact_paths: dict[str, str] = {}
+        if include_artifacts:
+            artifact_root = destination / "artifacts"
+            if artifact_root.exists() and overwrite:
+                shutil.rmtree(artifact_root)
+            artifact_root.mkdir(parents=True, exist_ok=True)
+            for label, source in self.artifact_dirs.items():
+                target = artifact_root / _safe_name(label)
+                if target.exists() and overwrite:
+                    shutil.rmtree(target)
+                if target.exists():
+                    raise FileExistsError(f"Refusing to overwrite existing artifact directory {target}.")
+                shutil.copytree(source, target)
+                artifact_paths[label] = str(target)
 
         metadata = {
             "solver": self.solver,
@@ -178,23 +204,13 @@ class Result:
             },
             "parameters": parameters,
             "parameters_by_observable": parameters_by_observable,
+            "numerics": None if self.numerics is None else numerics_summary(self.numerics),
+            "states": states_metadata,
             "metadata": _json_ready(self.metadata),
-            "artifacts_available": {label: str(path) for label, path in self.artifact_dirs.items()},
+            "artifacts_available": artifact_paths,
+            "artifacts_retained_in_memory": bool(self.artifact_dirs),
         }
         (destination / "result_metadata.json").write_text(json.dumps(metadata, indent=2))
-
-        if include_artifacts:
-            artifact_root = destination / "artifacts"
-            if artifact_root.exists() and overwrite:
-                shutil.rmtree(artifact_root)
-            artifact_root.mkdir(parents=True, exist_ok=True)
-            for label, source in self.artifact_dirs.items():
-                target = artifact_root / _safe_name(label)
-                if target.exists() and overwrite:
-                    shutil.rmtree(target)
-                if target.exists():
-                    raise FileExistsError(f"Refusing to overwrite existing artifact directory {target}.")
-                shutil.copytree(source, target)
 
         return destination
 

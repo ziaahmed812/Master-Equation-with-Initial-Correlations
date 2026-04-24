@@ -16,6 +16,7 @@ from master_equation_initial_correlations.generated_inputs import (
     generate_integral_tau,
     tau_index_step,
     tau_times,
+    validate_numerics,
     write_generated_input_files,
 )
 from master_equation_initial_correlations.fortran_runner import _write_dimensions
@@ -154,6 +155,33 @@ def test_custom_tau_grid_is_explicitly_configurable() -> None:
     times = tau_times(numerics)
     assert len(times) == 11
     assert times[-1] == 2.0
+
+
+@pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
+def test_numerics_reject_nonfinite_controls(bad_value: float) -> None:
+    with pytest.raises(ValueError, match="omega_max must be finite"):
+        validate_numerics(QuadratureConfig(omega_max=bad_value))
+
+
+def test_numerics_rejects_nondividing_time_steps() -> None:
+    with pytest.raises(ValueError, match="coefficient time grid step must exactly divide"):
+        validate_numerics(
+            QuadratureConfig(
+                coefficient_t_min=0.0,
+                coefficient_t_max=1.0,
+                coefficient_time_step=0.3,
+                fortran_t_final=1.0,
+            )
+        )
+    with pytest.raises(ValueError, match="bath-correlation tau grid step must exactly divide"):
+        validate_numerics(
+            QuadratureConfig(
+                correlation_tau_min=0.0,
+                correlation_tau_max=1.0,
+                correlation_tau_step=0.3,
+                fortran_t_final=1.0,
+            )
+        )
 
 
 def test_nonzero_time_grid_minima_are_reflected_in_index_steps_and_fortran_constants(tmp_path: Path) -> None:
