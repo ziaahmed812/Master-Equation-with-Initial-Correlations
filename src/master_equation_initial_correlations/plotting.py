@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from ._types import ReferenceCurves
+from .observables import normalize_observable_expression
 
 
 def _pyplot():
@@ -17,6 +18,7 @@ def _pyplot():
 
 
 def _axis_spec(observable: str, x_range: tuple[float, float]) -> dict[str, object]:
+    observable = normalize_observable_expression(observable)
     if x_range == (0.0, 5.0):
         x_ticks = np.arange(0.0, 5.0 + 0.001, 1.0)
     elif x_range == (0.0, 4.0):
@@ -29,7 +31,7 @@ def _axis_spec(observable: str, x_range: tuple[float, float]) -> dict[str, objec
     if observable == "jx":
         y_ticks = np.arange(-1.0, 1.0 + 0.001, 0.5)
         y_label = r"$j_x$"
-    elif observable == "jx2":
+    elif observable == "jx^2":
         y_ticks = np.arange(0.0, 1.0 + 0.001, 0.2)
         y_label = r"$j_x^{(2)}$"
     else:

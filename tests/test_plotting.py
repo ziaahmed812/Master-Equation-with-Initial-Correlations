@@ -19,3 +19,12 @@ def test_apply_paper_axes_style_for_jx2_ticks() -> None:
     assert spec["x_ticks"] == [0.0, 0.5, 1.0, 1.5, 2.0]
     assert spec["y_ticks"] == [0.0, 0.2, 0.4, 0.6000000000000001, 0.8, 1.0]
     plt.close(fig)
+
+
+def test_apply_paper_axes_style_accepts_public_jx_square_expression() -> None:
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots()
+    spec = apply_paper_axes_style(ax, observable="jx^2", x_range=(0.0, 2.0), y_range=(0.0, 1.0))
+    assert spec["y_label"] == r"$j_x^{(2)}$"
+    plt.close(fig)

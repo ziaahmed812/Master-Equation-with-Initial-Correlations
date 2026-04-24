@@ -55,10 +55,12 @@ def load_reference_curves(example_id: str, include_exact: str = "auto") -> Refer
     )
 
 
-def export_example_assets(example_id: str, output_dir: str | Path) -> Path:
+def export_example_assets(example_id: str, output_dir: str | Path, *, overwrite: bool = False) -> Path:
     example = get_example(example_id)
     destination = Path(output_dir) / example.public_id
     if destination.exists():
+        if not overwrite:
+            raise FileExistsError(f"Refusing to overwrite existing export directory {destination}.")
         shutil.rmtree(destination)
     copy_resource_tree(example.asset_dir, destination)
     return destination

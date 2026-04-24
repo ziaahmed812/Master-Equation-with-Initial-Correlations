@@ -1,9 +1,22 @@
-import numpy as np
-
-from master_equation_initial_correlations import PureDephasingParams, exact_curves
+from master_equation_initial_correlations import BathParams, PureDephasingSolver, RunConfig, SystemParams
 
 
-params = PureDephasingParams(J=0.5)
-correlated, uncorrelated = exact_curves(params, correlated_times=np.arange(1.0e-10, 1.0, 0.2))
-print(correlated[:3])
-print(uncorrelated[:3])
+system = SystemParams(
+    N=4,
+    epsilon0=4.0,
+    epsilon=4.0,
+    delta0=0.0,
+    delta=0.0,
+)
+bath = BathParams(
+    kind="ohmic",
+    beta=1.0,
+    coupling=0.05,
+    omega_c=5.0,
+)
+
+solver = PureDephasingSolver(system=system, bath=bath, observable="jx")
+result = solver.run(RunConfig(output_dir="output-pure-dephasing-N4"))
+
+print(f"Saved correlated curve: {result.output_files['exact_correlated']}")
+print(f"Saved uncorrelated curve: {result.output_files['exact_uncorrelated']}")

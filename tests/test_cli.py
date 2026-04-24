@@ -30,6 +30,13 @@ def test_cli_export(tmp_path: Path, capsys) -> None:
     assert (exported_dir / "rendered" / "Puredephasing-N=4-unitary.eps").exists()
 
 
+def test_cli_export_unknown_example_is_clean_error(capsys) -> None:
+    code = main(["export", "not-a-real-example", "--out", "unused"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "Unknown reference example" in captured.err
+
+
 def test_cli_run_exact_pure_dephasing(tmp_path: Path, capsys) -> None:
     code = main([
         "run",

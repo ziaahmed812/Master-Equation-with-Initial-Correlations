@@ -30,7 +30,7 @@ def write_json(path: Path, payload: dict) -> None:
 
 def load_table(path: str) -> np.ndarray:
     with as_file(asset(path)) as resolved_path:
-        return np.loadtxt(resolved_path, dtype=float)
+        return np.loadtxt(resolved_path, dtype=float, comments="#")
 
 
 def copy_resource_file(src: str, dst: Path) -> Path:
@@ -60,4 +60,36 @@ def ensure_clean_dir(path: Path) -> Path:
     if path.exists():
         shutil.rmtree(path)
     path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def prepare_output_dir(path: Path, *, overwrite: bool, generated_names: tuple[str, ...]) -> Path:
+    """Create an output directory without silently deleting user work.
+
+    Only known package-generated files or directories are considered for
+    overwrite. Unknown files are never removed by this helper.
+    """
+
+    path.mkdir(parents=True, exist_ok=True)
+    conflicts = [name for name in generated_names if (path / name).exists()]
+    if conflicts and not overwrite:
+        joined = ", ".join(conflicts)
+        raise FileExistsError(
+            f"Refusing to overwrite existing generated file(s) in {path}: {joined}. "
+            "Pass overwrite=True or use CLI --overwrite if you want to replace them."
+        )
+    if overwrite:
+        for name in conflicts:
+            target = path / name
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+    return path
+
+
+def write_table(path: Path, table: np.ndarray, *, header_lines: list[str]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    header = "\n".join(header_lines)
+    np.savetxt(path, table, fmt="%.16e", header=header, comments="# ")
     return path
