@@ -238,7 +238,7 @@ def _generic_correlator_block() -> str:
             "\tREAL(KIND = DBL), INTENT(IN)::TAU",
             "\tREAL(KIND = DBL) :: NU, ETA",
             "\tINTEGER :: J",
-            "\tJ = NINT(TAU/TAU_INDEX_STEP)",
+            "\tJ = NINT((TAU - TAU_INDEX_MIN)/TAU_INDEX_STEP)",
             "\tIF (J < 0) J = 0",
             "\tIF (J > NTAU - 1) J = NTAU - 1",
             "\tNU = G * NUARRAY(J + 1)",
@@ -324,7 +324,7 @@ def _parameterize_source(source: str, *, branch: str) -> str:
         raise RuntimeError("Could not parameterize Fortran run-constant block.")
     source = source.replace(
         "\tJ = NINT(T/0.0025D0)",
-        "\tJ = NINT(T/COEFF_INDEX_STEP)\n\tIF (J < 0) J = 0\n\tIF (J > NCOEFF - 1) J = NCOEFF - 1",
+        "\tJ = NINT((T - COEFF_INDEX_MIN)/COEFF_INDEX_STEP)\n\tIF (J < 0) J = 0\n\tIF (J > NCOEFF - 1) J = NCOEFF - 1",
         1,
     )
 
@@ -447,7 +447,9 @@ def _write_dimensions(path: Path, params: SimulationParams, numerics: NumericsCo
                 "\tINTEGER, PARAMETER :: DIMMAT = DIMSYS * DIMSYS",
                 f"\tINTEGER, PARAMETER :: NCOEFF = {numerics.coefficient_points}",
                 f"\tINTEGER, PARAMETER :: NTAU = {numerics.tau_points}",
+                f"\tREAL(KIND = DBL), PARAMETER :: COEFF_INDEX_MIN = {_fortran_float(numerics.coefficient_t_min)}",
                 f"\tREAL(KIND = DBL), PARAMETER :: COEFF_INDEX_STEP = {_fortran_float(coefficient_index_step(numerics))}",
+                f"\tREAL(KIND = DBL), PARAMETER :: TAU_INDEX_MIN = {_fortran_float(numerics.tau_t_min)}",
                 f"\tREAL(KIND = DBL), PARAMETER :: TAU_INDEX_STEP = {_fortran_float(tau_index_step(numerics))}",
                 "",
             ]
@@ -582,10 +584,12 @@ def _parameter_header(params: SimulationParams, *, branch: str, columns: str, nu
         f"coefficient_omega_max: {config.coefficient_omega_max}",
         f"correlation_omega_max: {config.correlation_omega_max}",
         f"coefficient_time_step: {config.coefficient_time_step}",
+        f"coefficient_t_min: {config.coefficient_t_min}",
         f"coefficient_t_max: {config.coefficient_t_max}",
         f"coefficient_points: {config.coefficient_points}",
         f"coefficient_index_step: {coefficient_index_step(config)}",
         f"correlation_tau_step: {config.correlation_tau_step}",
+        f"correlation_tau_min: {config.correlation_tau_min}",
         f"correlation_tau_max: {config.correlation_tau_max}",
         f"correlation_tau_points: {config.tau_points}",
         f"tau_index_step: {tau_index_step(config)}",

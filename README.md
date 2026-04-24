@@ -253,9 +253,10 @@ correlation tables are generated inside that window. Advanced users can also
 set separate cutoffs such as `correlation_omega_max`,
 `initial_state_omega_max`, or initial-state quadrature nodes.
 
-Public solvers currently require a one-dimensional, strictly increasing,
-uniformly spaced `tlist` starting at `0.0`. The analytical exact solver follows
-the same public grid contract for consistency. For Fortran-backed
+The Fortran-backed master-equation solver requires a one-dimensional, strictly
+increasing, uniformly spaced `tlist` starting at `0.0`. The analytical
+pure-dephasing solver is Python-only and accepts arbitrary finite,
+nonnegative, strictly increasing time samples. For Fortran-backed
 master-equation runs, the first returned time is a tiny positive value
 (`1e-11`), and `result.times` records the solver output without relabeling it.
 
@@ -276,8 +277,10 @@ matplotlib in your environment; it is not a core package dependency.
 
 Paper-parameter scripts live in `paper-plots/`. They compute arrays for the
 published parameter sets using the same public API. Each script pins the paper
-numerical settings explicitly and is written like a notebook cell: run it,
-inspect the arrays, and plot or save however you prefer.
+coefficient, bath-correlation, and initial-state cutoff settings explicitly.
+They are intentionally notebook-style parameter scripts, not the full
+high-resolution internal figure-regeneration workflow: run one, inspect the
+arrays, and plot or save however you prefer.
 
 ## Citation
 

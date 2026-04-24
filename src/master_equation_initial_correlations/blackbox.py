@@ -46,6 +46,21 @@ def _validate_tlist(tlist: Any, *, solver_description: str) -> tuple[np.ndarray,
     return times, dt, float(times[-1])
 
 
+def _validate_exact_tlist(tlist: Any) -> np.ndarray:
+    times = np.asarray(tlist, dtype=float)
+    if times.ndim != 1:
+        raise ValueError("tlist must be a one-dimensional array of times.")
+    if times.size < 1:
+        raise ValueError("tlist must contain at least one time point.")
+    if not np.all(np.isfinite(times)):
+        raise ValueError("tlist must contain only finite values.")
+    if np.any(times < 0.0):
+        raise ValueError("tlist for the exact analytical pure-dephasing solver must be nonnegative.")
+    if times.size > 1 and np.any(np.diff(times) <= 0):
+        raise ValueError("tlist must be strictly increasing.")
+    return times
+
+
 def _numerics_from_tlist(numerics: NumericsConfig | None, *, dt: float, t_final: float) -> NumericsConfig:
     base = validate_numerics(numerics)
     # The Fortran loop writes while T < TFINAL, so use one internal
@@ -75,6 +90,9 @@ def _normalize_e_ops(e_ops: Any) -> tuple[list[Any], list[str], dict[str, int]]:
     else:
         observables = list(e_ops)
         labels = [observable_label(observable, f"observable_{index}") for index, observable in enumerate(observables)]
+
+    if not observables:
+        raise ValueError("e_ops must contain at least one observable.")
 
     seen: dict[str, int] = {}
     unique_labels: list[str] = []
@@ -185,7 +203,7 @@ class _BasePureDephasingBranchSolver:
     branch: ClassVar[Branch] = "with_correlations"
 
     def run(self, tlist: Any, e_ops: Any = None, *, store_states: bool = False, verbose: bool = True) -> Result:
-        times, _, _ = _validate_tlist(tlist, solver_description="exact analytical pure-dephasing solver")
+        times = _validate_exact_tlist(tlist)
         observables, labels, label_index = _normalize_e_ops(self.observable if e_ops is None else e_ops)
         system = validate_system_params(self.system)
         bath = validate_bath_params(self.bath)
@@ -398,7 +416,6 @@ def solve(
     correlations: str = "with",
     model: str = "auto",
     numerics: NumericsConfig | None = None,
-    initial_state: np.ndarray | None = None,
     save_density: bool = False,
     keep_artifacts: bool = False,
     verbose: bool = True,
@@ -409,17 +426,11 @@ def solve(
     The public master-equation workflow generates the reduced system density
     matrix from the correlated joint system-bath equilibrium state determined
     by ``system`` and ``bath``. Custom reduced initial states are intentionally
-    not accepted in this public black-box API yet, because they would not
-    define a complete custom joint system-bath state. Temporary Fortran
-    staging folders are cleaned before return unless ``keep_artifacts=True``.
+    not part of this public black-box API yet, because they would not define a
+    complete custom joint system-bath state. Temporary Fortran staging folders
+    are cleaned before return unless ``keep_artifacts=True``.
     """
 
-    if initial_state is not None:
-        raise ValueError(
-            "meic.solve currently uses the generated reduced state from the "
-            "joint equilibrium preparation; custom initial_state is not "
-            "supported in the public master-equation API."
-        )
     if not isinstance(bath, BathParams):
         raise TypeError("solve(system, bath, ...) requires bath to be a BathParams instance.")
     normalized_bath = validate_bath_params(bath)
@@ -442,7 +453,6 @@ def solve(
         system=system,
         bath=normalized_bath,
         observable="jx",
-        initial_state=initial_state,
         numerics=numerics,
     )
     return solver.run(

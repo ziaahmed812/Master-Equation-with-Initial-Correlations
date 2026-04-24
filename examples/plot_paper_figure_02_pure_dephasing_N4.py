@@ -1,6 +1,13 @@
 import numpy as np
 import master_equation_initial_correlations as meic
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib.pyplot as plt
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError(
+        "This optional plotting example needs matplotlib; install it if you want "
+        "to run this plotting script. The solver itself does not require matplotlib."
+    ) from exc
 
 
 system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
@@ -16,7 +23,9 @@ bath = meic.BathParams(
 tlist = np.linspace(0.0, 5.0, 51)
 e_ops = ["jx"]
 paper_numerics = meic.NumericsConfig(
-    omega_max=500.0,
+    coefficient_omega_max=500.0,
+    correlation_omega_max=510.0,
+    initial_state_omega_max=500.0,
     omega_nodes=500,
     lambda_nodes=100,
     initial_state_omega_nodes=260,

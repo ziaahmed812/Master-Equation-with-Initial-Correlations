@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.polynomial.legendre import leggauss
@@ -82,12 +83,12 @@ def tau_times(numerics: NumericsConfig | None = None) -> np.ndarray:
 
 def coefficient_index_step(numerics: NumericsConfig | None = None) -> float:
     config = validate_numerics(numerics)
-    return config.coefficient_t_max / (config.coefficient_points - 1)
+    return (config.coefficient_t_max - config.coefficient_t_min) / (config.coefficient_points - 1)
 
 
 def tau_index_step(numerics: NumericsConfig | None = None) -> float:
     config = validate_numerics(numerics)
-    return config.tau_t_max / (config.tau_points - 1)
+    return (config.tau_t_max - config.tau_t_min) / (config.tau_points - 1)
 
 
 def numerics_summary(numerics: NumericsConfig | None = None) -> dict[str, float | int]:
@@ -103,10 +104,12 @@ def numerics_summary(numerics: NumericsConfig | None = None) -> dict[str, float 
         "correlation_omega_max": config.correlation_omega_max,
         "initial_state_omega_max": config.initial_state_omega_max,
         "coefficient_time_step": config.coefficient_time_step,
+        "coefficient_t_min": config.coefficient_t_min,
         "coefficient_t_max": config.coefficient_t_max,
         "coefficient_points": config.coefficient_points,
         "coefficient_index_step": coefficient_index_step(config),
         "correlation_tau_step": config.correlation_tau_step,
+        "correlation_tau_min": config.tau_t_min,
         "correlation_tau_max": config.correlation_tau_max,
         "correlation_tau_points": config.tau_points,
         "tau_index_step": tau_index_step(config),
@@ -373,6 +376,13 @@ def _validate_generated_initial_state(initial_state: np.ndarray, params: Simulat
             "generated initial_state is not Hermitian within numerical tolerance "
             f"(defect={hermiticity_defect:.3g}); increase initial-state quadrature controls "
             "or check the requested parameter regime."
+        )
+    if hermiticity_defect > 1.0e-8:
+        warnings.warn(
+            "generated initial_state required Hermitian symmetrization after quadrature "
+            f"(defect={hermiticity_defect:.3g}); check convergence for this parameter regime.",
+            RuntimeWarning,
+            stacklevel=3,
         )
     matrix = 0.5 * (matrix + matrix.conj().T)
     trace = np.trace(matrix)

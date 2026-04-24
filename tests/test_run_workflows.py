@@ -218,24 +218,52 @@ def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
         result.save(tmp_path / "no-artifacts", include_artifacts=True)
 
 
+def test_result_save_overwrite_removes_stale_generated_files(tmp_path: Path) -> None:
+    system = SystemParams(N=1, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+    destination = tmp_path / "saved-result"
+    first = meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.5, 6), e_ops=["jx", "jz"])
+    second = meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.5, 6), e_ops=["jx"])
+
+    first.save(destination)
+    (destination / "notes.txt").write_text("user file")
+    second.save(destination, overwrite=True)
+
+    assert (destination / "expect-jx.dat").exists()
+    assert not (destination / "expect-jz.dat").exists()
+    assert (destination / "notes.txt").read_text() == "user file"
+    metadata = json.loads((destination / "result_metadata.json").read_text())
+    assert metadata["parameters"]["J"] == 0.5
+    assert isinstance(metadata["metadata"]["system"], dict)
+
+
 def test_blackbox_tlist_validation() -> None:
     system = SystemParams(N=1, epsilon=4.0)
     bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
+    exact = meic.exact.solve(system, bath, tlist=np.array([0.0, 0.07, 0.2]), e_ops=["jx"])
+    assert exact.times.tolist() == pytest.approx([0.0, 0.07, 0.2])
     with pytest.raises(ValueError, match="start at 0.0") as start_error:
-        meic.exact.solve(system, bath, tlist=np.linspace(0.1, 1.0, 5))
-    assert "exact analytical pure-dephasing solver" in str(start_error.value)
-    assert "Fortran-backed" not in str(start_error.value)
+        meic.solve(system, bath, tlist=np.linspace(0.1, 1.0, 5), e_ops=["jx"])
+    assert "Fortran-backed master-equation solver" in str(start_error.value)
     with pytest.raises(ValueError, match="uniformly spaced") as spacing_error:
-        meic.exact.solve(system, bath, tlist=np.array([0.0, 0.1, 0.3]))
-    assert "exact analytical pure-dephasing solver" in str(spacing_error.value)
-    assert "Fortran-backed" not in str(spacing_error.value)
+        meic.solve(system, bath, tlist=np.array([0.0, 0.1, 0.3]), e_ops=["jx"])
+    assert "Fortran-backed master-equation solver" in str(spacing_error.value)
+
+
+def test_public_solvers_reject_empty_observable_lists() -> None:
+    system = SystemParams(N=1, epsilon=4.0)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
+    with pytest.raises(ValueError, match="e_ops must contain at least one observable"):
+        meic.exact.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=[])
+    with pytest.raises(ValueError, match="e_ops must contain at least one observable"):
+        meic.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=[])
 
 
 def test_public_master_equation_rejects_custom_initial_state() -> None:
     system = SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
     bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
     rho0 = np.eye(3, dtype=complex) / 3.0
-    with pytest.raises(ValueError, match="custom initial_state is not supported"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'initial_state'"):
         meic.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=["jx"], initial_state=rho0)
 
 
@@ -246,6 +274,7 @@ def test_bath_params_are_keyword_only() -> None:
 
 def test_public_api_does_not_export_internal_solver_classes() -> None:
     assert not hasattr(meic, "BosonicBathSolverWC")
+    assert "initial_state" not in inspect.signature(meic.solve).parameters
     signature = inspect.signature(BosonicBathSolverWC)
     assert "branch" not in signature.parameters
     assert "bath_type" not in signature.parameters
@@ -261,6 +290,15 @@ def test_blackbox_validation_rejects_bad_spectrum_before_fortran() -> None:
         meic.solve(system, BathParams(kind="subohmic", s=2.0), tlist=tlist, e_ops=["jx"])
     with pytest.raises(ValueError, match="spin-environment"):
         meic.solve(system, BathParams(bath_type="spin", kind="ohmic", s=1.0), tlist=tlist, e_ops=["jx"], model="spin-boson")
+
+
+def test_master_equation_rejects_ill_conditioned_near_zero_splittings() -> None:
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
+    tlist = np.linspace(0.0, 0.05, 6)
+    with pytest.raises(ValueError, match="final system splitting larger than 1e-10"):
+        meic.solve(SystemParams(N=2, epsilon0=4.0, epsilon=1.0e-12, delta0=0.5, delta=0.0), bath, tlist=tlist, e_ops=["jx"])
+    with pytest.raises(ValueError, match="initial system splitting larger than 1e-10"):
+        meic.solve(SystemParams(N=2, epsilon0=1.0e-12, epsilon=2.5, delta0=0.0, delta=0.5), bath, tlist=tlist, e_ops=["jx"])
 
 
 def test_exact_namespace_rejects_non_pure_dephasing() -> None:
@@ -353,9 +391,14 @@ def test_paper_plot_scripts_are_notebook_style_and_syntax_valid() -> None:
     root = Path(__file__).resolve().parents[1] / "paper-plots"
     for script in sorted(root.glob("figure_*.py")):
         source = script.read_text()
+        lines = {line.strip() for line in source.splitlines()}
         compile(source, str(script), "exec")
         assert "def main" not in source
         assert ".close()" not in source
+        assert "omega_max=500.0," not in lines
+        assert "coefficient_omega_max=500.0," in lines
+        assert "correlation_omega_max=510.0," in lines
+        assert "initial_state_omega_max=500.0," in lines
 
 
 @pytest.mark.solver_rerun

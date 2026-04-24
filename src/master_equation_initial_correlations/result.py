@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, is_dataclass
 import json
 from pathlib import Path
 import shutil
@@ -30,6 +30,24 @@ def _expectation_table(times: np.ndarray, values: np.ndarray) -> tuple[np.ndarra
     if np.iscomplexobj(values) and np.max(np.abs(values.imag)) > 1.0e-10:
         return np.column_stack([times, values.real, values.imag]), "t expectation_real expectation_imag"
     return np.column_stack([times, values.real]), "t expectation"
+
+
+def _json_ready(value: Any) -> Any:
+    if is_dataclass(value) and not isinstance(value, type):
+        return _json_ready(asdict(value))
+    if isinstance(value, dict):
+        return {str(key): _json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, np.ndarray):
+        return _json_ready(value.tolist())
+    if isinstance(value, np.generic):
+        return _json_ready(value.item())
+    if isinstance(value, complex):
+        return {"real": float(value.real), "imag": float(value.imag)}
+    return value
 
 
 @dataclass
@@ -97,17 +115,22 @@ class Result:
                     f"include_artifacts=True was requested, but artifact directories are unavailable: {joined}. "
                     "For Fortran-backed runs, rerun with keep_artifacts=True and save before close()."
                 )
-        expected_files = [f"expect-{_safe_name(label)}.dat" for label in self.e_ops] + ["result_metadata.json"]
-        conflicts = [name for name in expected_files if (destination / name).exists()]
-        if include_artifacts and (destination / "artifacts").exists():
-            conflicts.append("artifacts")
+        generated_targets: list[Path] = []
+        if destination.exists():
+            generated_targets.extend(sorted(destination.glob("expect-*.dat")))
+            metadata_path = destination / "result_metadata.json"
+            if metadata_path.exists():
+                generated_targets.append(metadata_path)
+            artifact_root = destination / "artifacts"
+            if artifact_root.exists():
+                generated_targets.append(artifact_root)
+        conflicts = [path.name for path in generated_targets]
         if conflicts and not overwrite:
             joined = ", ".join(conflicts)
             raise FileExistsError(f"Refusing to overwrite existing result file(s) in {destination}: {joined}.")
         destination.mkdir(parents=True, exist_ok=True)
         if overwrite:
-            for name in conflicts:
-                target = destination / name
+            for target in generated_targets:
                 if target.is_dir():
                     shutil.rmtree(target)
                 else:
@@ -130,13 +153,13 @@ class Result:
 
         observable_parameters = self.metadata.get("observable_parameters")
         if observable_parameters is None:
-            parameters_by_observable = {self.e_ops[0]: getattr(self.params, "__dict__", str(self.params))} if self.e_ops else {}
+            parameters_by_observable = {self.e_ops[0]: _json_ready(self.params)} if self.e_ops else {}
         else:
             parameters_by_observable = {
-                label: getattr(params, "__dict__", str(params))
+                label: _json_ready(params)
                 for label, params in zip(self.e_ops, observable_parameters)
             }
-        parameters = getattr(self.params, "__dict__", str(self.params))
+        parameters = _json_ready(self.params)
         if len(self.e_ops) > 1:
             parameters = {
                 "note": "multiple observables were calculated; see parameters_by_observable for observable-specific provenance",
@@ -155,10 +178,10 @@ class Result:
             },
             "parameters": parameters,
             "parameters_by_observable": parameters_by_observable,
-            "metadata": self.metadata,
+            "metadata": _json_ready(self.metadata),
             "artifacts_available": {label: str(path) for label, path in self.artifact_dirs.items()},
         }
-        (destination / "result_metadata.json").write_text(json.dumps(metadata, indent=2, default=str))
+        (destination / "result_metadata.json").write_text(json.dumps(metadata, indent=2))
 
         if include_artifacts:
             artifact_root = destination / "artifacts"

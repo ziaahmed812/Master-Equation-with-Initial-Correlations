@@ -164,10 +164,11 @@ def validate_model_compatibility(*, system: SystemParams, bath: BathParams, mode
         if not close(system.delta0, 0.0) or not close(system.delta, 0.0):
             raise ValueError("pure-dephasing runs require delta0=0 and delta=0.")
     else:
-        if float(np.hypot(system.epsilon, system.delta)) <= 0.0:
-            raise ValueError("master-equation runs require a nonzero final system splitting.")
-        if float(np.hypot(system.epsilon0, system.delta0)) <= 0.0:
-            raise ValueError("master-equation runs require a nonzero initial system splitting.")
+        min_splitting = 1.0e-10
+        if float(np.hypot(system.epsilon, system.delta)) <= min_splitting:
+            raise ValueError("master-equation runs require a final system splitting larger than 1e-10.")
+        if float(np.hypot(system.epsilon0, system.delta0)) <= min_splitting:
+            raise ValueError("master-equation runs require an initial system splitting larger than 1e-10.")
 
 
 def simulation_params_from_public(

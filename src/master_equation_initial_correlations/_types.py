@@ -154,11 +154,11 @@ class NumericsConfig:
         if "coefficient_points" in legacy_names:
             points = int(legacy_names.pop("coefficient_points"))
             if points > 1:
-                coefficient_time_step = float(coefficient_t_max) / float(points - 1)
+                coefficient_time_step = (float(coefficient_t_max) - float(coefficient_t_min)) / float(points - 1)
         if "tau_points" in legacy_names:
             points = int(legacy_names.pop("tau_points"))
             if points > 1:
-                correlation_tau_step = float(correlation_tau_max) / float(points - 1)
+                correlation_tau_step = (float(correlation_tau_max) - float(correlation_tau_min)) / float(points - 1)
         if legacy_names:
             unknown = ", ".join(sorted(legacy_names))
             raise TypeError(f"unknown NumericsConfig option(s): {unknown}")
@@ -188,16 +188,16 @@ class NumericsConfig:
         object.__setattr__(self, "fortran_t_final", float(fortran_t_final))
 
     @staticmethod
-    def _points(t_max: float, step: float) -> int:
-        return int(round(float(t_max) / float(step))) + 1
+    def _points(t_min: float, t_max: float, step: float) -> int:
+        return int(round((float(t_max) - float(t_min)) / float(step))) + 1
 
     @property
     def coefficient_points(self) -> int:
-        return self._points(self.coefficient_t_max, self.coefficient_time_step)
+        return self._points(self.coefficient_t_min, self.coefficient_t_max, self.coefficient_time_step)
 
     @property
     def tau_points(self) -> int:
-        return self._points(self.correlation_tau_max, self.correlation_tau_step)
+        return self._points(self.correlation_tau_min, self.correlation_tau_max, self.correlation_tau_step)
 
     @property
     def instate_omega_nodes(self) -> int:

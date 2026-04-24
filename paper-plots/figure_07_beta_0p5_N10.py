@@ -7,7 +7,9 @@ bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=0.5, coupl
 tlist = np.linspace(0.0, 5.0, 51)
 e_ops = ["jx"]
 paper_numerics = meic.NumericsConfig(
-    omega_max=500.0,
+    coefficient_omega_max=500.0,
+    correlation_omega_max=510.0,
+    initial_state_omega_max=500.0,
     omega_nodes=500,
     lambda_nodes=100,
     initial_state_omega_nodes=260,

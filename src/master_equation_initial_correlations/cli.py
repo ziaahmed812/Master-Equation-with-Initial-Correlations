@@ -135,7 +135,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--artifacts", action="store_true", help="Also save generated .dat inputs, Fortran sources, and logs.")
     run_parser.add_argument("--overwrite", action="store_true")
     run_parser.add_argument("--quiet", action="store_true")
-    run_parser.add_argument("--omega-max", type=float, default=500.0, help="Frequency cutoff for coefficient and correlation integrals.")
+    run_parser.add_argument("--omega-max", type=float, help="Shared frequency cutoff for coefficient, correlation, and initial-state integrals.")
     run_parser.add_argument("--omega-nodes", type=int, default=500, help="Frequency quadrature nodes.")
     run_parser.add_argument("--lambda-nodes", type=int, default=100)
     run_parser.add_argument("--initial-state-omega-nodes", type=int, default=260)

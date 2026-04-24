@@ -68,8 +68,8 @@ result = meic.solve(
 `bath_type` determines the physical backend: bosonic bath uses the spin-boson
 master-equation workflow, and spin bath uses the spin-environment workflow.
 
-Public solver runs currently require a one-dimensional, strictly increasing,
-uniformly spaced `tlist` starting at `0.0`.
+Fortran-backed master-equation runs require a one-dimensional, strictly
+increasing, uniformly spaced `tlist` starting at `0.0`.
 
 ## Exact Solver
 
@@ -84,7 +84,8 @@ result = meic.exact.solve(
 ```
 
 The exact solver is analytical, Python-only, and valid for bosonic Ohmic pure
-dephasing with `delta0=0` and `delta=0`.
+dephasing with `delta0=0` and `delta=0`. It accepts arbitrary finite,
+nonnegative, strictly increasing time samples.
 
 ## Result
 

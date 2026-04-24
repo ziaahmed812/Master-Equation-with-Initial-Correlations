@@ -6,14 +6,19 @@ import pytest
 from master_equation_initial_correlations._resources import asset
 from master_equation_initial_correlations.generated_inputs import (
     QuadratureConfig,
+    _validate_generated_initial_state,
+    coefficient_index_step,
+    coefficient_times,
     generate_bath_correlation_tau,
     generate_coefficients,
     generate_inputs,
     generate_initial_state,
     generate_integral_tau,
+    tau_index_step,
     tau_times,
     write_generated_input_files,
 )
+from master_equation_initial_correlations.fortran_runner import _write_dimensions
 from master_equation_initial_correlations.simulation import SimulationParams
 
 
@@ -111,6 +116,14 @@ def test_generated_initial_state_fails_loudly_when_quadrature_is_unphysical() ->
         generate_initial_state(params, numerics)
 
 
+def test_generated_initial_state_warns_before_symmetrizing_marginal_hermiticity_defect() -> None:
+    params = SimulationParams(bath="bosonic", model="spin-boson", spectral="ohmic", observable="jx", N=1)
+    matrix = np.asarray([[0.5, 2.0e-8], [0.0, 0.5]], dtype=complex)
+    with pytest.warns(RuntimeWarning, match="Hermitian symmetrization"):
+        validated = _validate_generated_initial_state(matrix, params)
+    np.testing.assert_allclose(validated, validated.conj().T)
+
+
 def test_user_supplied_initial_state_is_written_as_complex_fortran_input(tmp_path: Path) -> None:
     params = SimulationParams(
         bath="bosonic",
@@ -141,3 +154,24 @@ def test_custom_tau_grid_is_explicitly_configurable() -> None:
     times = tau_times(numerics)
     assert len(times) == 11
     assert times[-1] == 2.0
+
+
+def test_nonzero_time_grid_minima_are_reflected_in_index_steps_and_fortran_constants(tmp_path: Path) -> None:
+    numerics = QuadratureConfig(
+        coefficient_t_min=1.0,
+        coefficient_t_max=2.0,
+        coefficient_time_step=0.25,
+        correlation_tau_min=0.5,
+        correlation_tau_max=1.5,
+        correlation_tau_step=0.25,
+        fortran_t_final=1.5,
+    )
+    assert coefficient_times(numerics).tolist() == pytest.approx([1.0, 1.25, 1.5, 1.75, 2.0])
+    assert tau_times(numerics).tolist() == pytest.approx([0.5, 0.75, 1.0, 1.25, 1.5])
+    assert coefficient_index_step(numerics) == pytest.approx(0.25)
+    assert tau_index_step(numerics) == pytest.approx(0.25)
+
+    path = _write_dimensions(tmp_path / "dimensions.inc", SimulationParams(bath="bosonic", model="spin-boson", spectral="ohmic", N=2), numerics)
+    text = path.read_text()
+    assert "COEFF_INDEX_MIN" in text
+    assert "TAU_INDEX_MIN" in text

@@ -1,3 +1,11 @@
+"""Compatibility file-output workflow.
+
+The public notebook-facing API is ``master_equation_initial_correlations.solve``
+and ``master_equation_initial_correlations.exact.solve``. This module remains
+available for provenance scripts and tests that intentionally need the older
+file-first workflow.
+"""
+
 from __future__ import annotations
 
 from dataclasses import asdict
