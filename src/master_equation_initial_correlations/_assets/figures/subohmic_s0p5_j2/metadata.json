@@ -1,13 +1,12 @@
 {
-  "preset_id": "subohmic_s0p5_j2",
-  "figure_id": "F13_subOhmic-S=0.5,J=2",
+  "example_id": "subohmic_s0p5_j2",
   "paper_figure_number": 11,
   "family": "subohmic_s0p5",
-  "label": "Sub-Ohmic spin environment (J=2)",
+  "label": "Sub-Ohmic bosonic bath (J=2)",
   "paper_asset": "subOhmic-S=0.5,J=2.eps",
   "observable": "jx",
   "solver_id": "subohmic/J2",
-  "execution_profile": "light",
+  "execution_profile": "standard",
   "supports_exact": false,
   "supports_rerun": true,
   "parameters": {
@@ -34,7 +33,6 @@
     "plot_divisor": 1.0
   },
   "aliases": [
-    "F13_subOhmic-S=0.5,J=2",
     "subOhmic-S=0.5,J=2"
   ],
   "paths": {

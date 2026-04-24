@@ -1,13 +1,12 @@
 {
-  "preset_id": "jx2_ohmic_j2",
-  "figure_id": "F07_Jx_2-plot-for-N=4",
+  "example_id": "jx2_ohmic_j2",
   "paper_figure_number": 9,
   "family": "jx2_ohmic",
   "label": "Second-moment Jx benchmark (J=2)",
   "paper_asset": "Jx_2-plot-for-N=4.eps",
   "observable": "jx2",
   "solver_id": "jx2/J2",
-  "execution_profile": "light",
+  "execution_profile": "standard",
   "supports_exact": false,
   "supports_rerun": true,
   "parameters": {
@@ -33,7 +32,6 @@
     "plot_divisor": 4.0
   },
   "aliases": [
-    "F07_Jx_2-plot-for-N=4",
     "Jx_2-plot-for-N=4"
   ],
   "paths": {

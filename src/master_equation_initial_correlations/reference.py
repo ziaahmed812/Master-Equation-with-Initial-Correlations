@@ -7,7 +7,7 @@ import numpy as np
 
 from ._resources import copy_resource_tree, load_table
 from ._types import ReferenceCurves
-from .catalog import get_preset
+from .catalog import get_example
 
 
 def _scaled_curve(table: np.ndarray, divisor: float) -> np.ndarray:
@@ -16,18 +16,18 @@ def _scaled_curve(table: np.ndarray, divisor: float) -> np.ndarray:
     return scaled
 
 
-def load_reference_curves(preset_id: str, include_exact: str = "auto") -> ReferenceCurves:
-    preset = get_preset(preset_id)
-    base = preset.asset_dir
+def load_reference_curves(example_id: str, include_exact: str = "auto") -> ReferenceCurves:
+    example = get_example(example_id)
+    base = example.asset_dir
 
     correlated = load_table(f"{base}/tables/EXPX-C.DAT")
     uncorrelated = load_table(f"{base}/tables/EXPX-UNC.DAT")
     jz_correlated = None
     jz_uncorrelated = None
 
-    if preset.plot_divisor != 1.0:
-        correlated = _scaled_curve(correlated, preset.plot_divisor)
-        uncorrelated = _scaled_curve(uncorrelated, preset.plot_divisor)
+    if example.plot_divisor != 1.0:
+        correlated = _scaled_curve(correlated, example.plot_divisor)
+        uncorrelated = _scaled_curve(uncorrelated, example.plot_divisor)
 
     expz_c_path = f"{base}/tables/EXPZ-C.DAT"
     expz_u_path = f"{base}/tables/EXPZ-UNC.DAT"
@@ -37,7 +37,7 @@ def load_reference_curves(preset_id: str, include_exact: str = "auto") -> Refere
     except FileNotFoundError:
         pass
 
-    want_exact = include_exact == "always" or (include_exact == "auto" and preset.supports_exact)
+    want_exact = include_exact == "always" or (include_exact == "auto" and example.supports_exact)
     exact_correlated = None
     exact_uncorrelated = None
     if want_exact:
@@ -45,7 +45,7 @@ def load_reference_curves(preset_id: str, include_exact: str = "auto") -> Refere
         exact_uncorrelated = load_table(f"{base}/tables/exact-uncorrelated.dat")
 
     return ReferenceCurves(
-        preset=preset,
+        example=example,
         correlated=correlated,
         uncorrelated=uncorrelated,
         jz_correlated=jz_correlated,
@@ -55,10 +55,10 @@ def load_reference_curves(preset_id: str, include_exact: str = "auto") -> Refere
     )
 
 
-def export_figure_assets(preset_id: str, output_dir: str | Path) -> Path:
-    preset = get_preset(preset_id)
-    destination = Path(output_dir) / preset.id
+def export_example_assets(example_id: str, output_dir: str | Path) -> Path:
+    example = get_example(example_id)
+    destination = Path(output_dir) / example.public_id
     if destination.exists():
         shutil.rmtree(destination)
-    copy_resource_tree(preset.asset_dir, destination)
+    copy_resource_tree(example.asset_dir, destination)
     return destination

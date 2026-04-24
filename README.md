@@ -1,34 +1,17 @@
 # Master-Equation-with-Initial-Correlations
 
-`Master-Equation-with-Initial-Correlations` is a reusable implementation framework for the master-equation workflows associated with the paper *A master equation incorporating the system-environment correlations present in the joint equilibrium state*. It packages validated figure assets, reusable Python interfaces, and optional legacy-Fortran reruns for the supported model families studied in the paper.
+`Master-Equation-with-Initial-Correlations` is a research software package for the master-equation workflows in the paper *A master equation incorporating the system-environment correlations present in the joint equilibrium state*.
 
-The package is designed to be useful in two ways:
+The package focuses on two physical settings from the paper:
 
-- as a Python-first reference library for loading bundled results, plotting them, and working with the exact pure-dephasing benchmark
-- as an optional reproduction layer for the legacy Fortran-backed workflows when you want to rerun the original solver paths
+- a collective spin system coupled to a bosonic bath of harmonic oscillators
+- a collective spin system coupled to a spin bath
 
-## What The Package Provides
+It provides bundled reference examples, paper-style plotting helpers, an exact pure-dephasing benchmark written in Python, and optional reruns of the preserved Fortran solver paths.
 
-- a public preset catalog covering all 14 published figure configurations
-- packaged figure assets in `EPS`, `PNG`, and numeric table form
-- a free-form Python implementation of the exact pure-dephasing benchmark
-- paper-style plotting helpers for `j_x` and `j_x^{(2)}`
-- optional rerun support for curated legacy Fortran solvers
-- a small command-line interface for listing presets, exporting assets, computing exact pure-dephasing curves, and rerunning supported presets
+Paper: https://arxiv.org/abs/2012.14853
 
-## Validated Lightweight Workflows
-
-The default public validation path is centered on lightweight presets that are fast to install, inspect, and rerun:
-
-- `pure_dephasing_ohmic_j0p5` (`N=1`)
-- `pure_dephasing_ohmic_j2` (`N=4`)
-- `beyond_pure_dephasing_ohmic_j1` (`N=2`)
-
-Other presets are still packaged and available, but some are marked `advanced` or `heavy` because they are not part of the default lightweight validation lane.
-
-## Installation
-
-For Python-only use:
+## Install
 
 ```bash
 pip install .
@@ -40,31 +23,64 @@ For development:
 pip install -e .[dev]
 ```
 
-For optional legacy reruns, install a Fortran compiler and BLAS/LAPACK on your system as well. The base package does not compile anything at install time.
-
-If you plan to use the legacy rerun path, start with:
+Python-only workflows work immediately. Rerunning the legacy solver paths also requires `gfortran` plus BLAS/LAPACK:
 
 ```bash
 meic doctor
 ```
 
-to confirm that the package can see your compiler and link configuration.
+## Command Line
 
-## Quick Start
+List the bundled reference examples:
 
-### Load a bundled reference preset
+```bash
+meic examples
+```
+
+Export one bundled example:
+
+```bash
+meic export pure-dephasing-ohmic-N4 --out exported-example
+```
+
+Run the exact bosonic-bath pure-dephasing benchmark with your own parameters:
+
+```bash
+meic run --bath bosonic --model pure-dephasing --spectral ohmic \
+  --N 4 --epsilon0 4 --epsilon 4 --delta0 0 --delta 0 \
+  --beta 1 --coupling 0.05 --omega-c 5 --out pure-dephasing-output
+```
+
+Rerun a bosonic-bath spin-boson workflow for a packaged coefficient branch:
+
+```bash
+meic run --bath bosonic --model spin-boson --spectral ohmic \
+  --N 4 --epsilon0 4 --epsilon 2.5 --delta0 0.5 --delta 0.5 \
+  --beta 1 --coupling 0.05 --omega-c 5 --observable jx \
+  --out spin-boson-output
+```
+
+Rerun the spin-bath workflow:
+
+```bash
+meic run --bath spin --model spin-environment --spectral ohmic \
+  --N 4 --epsilon0 4 --epsilon 2.5 --delta0 0.5 --delta 0.5 \
+  --beta 1 --coupling 0.05 --omega-c 5 --out spin-bath-output
+```
+
+## Python API
 
 ```python
 import master_equation_initial_correlations as meic
 
-preset = meic.get_preset("pure_dephasing_ohmic_j0p5")
-curves = meic.load_reference_curves(preset.id)
+for example in meic.list_examples():
+    print(example.public_id, example.bath, example.model)
 
-print(preset.label)
+curves = meic.load_reference_curves("pure-dephasing-ohmic-N1")
 print(curves.correlated[:3])
 ```
 
-### Compute exact pure-dephasing curves in Python
+Exact pure dephasing can be evaluated directly:
 
 ```python
 import numpy as np
@@ -75,59 +91,33 @@ times = np.arange(1.0e-10, 5.0, 0.2)
 correlated, uncorrelated = exact_curves(params, correlated_times=times)
 ```
 
-### Use the CLI
+The higher-dimensional master-equation workflows use preserved Fortran solvers and precomputed coefficient inputs. The command line accepts physical parameters, selects the matching packaged coefficient branch, and gives a clear error if that branch is not packaged yet. The exact pure-dephasing benchmark is the free-form Python solver in this release.
 
-```bash
-meic list
-meic list --include-advanced --include-heavy
-meic show pure_dephasing_ohmic_j2
-meic export pure_dephasing_ohmic_j2 --out exported-assets
-meic exact pure-dephasing --preset pure_dephasing_ohmic_j0p5 --out exact-output
-meic doctor
-```
+## Model Families
 
-## Supported Model Families
+- Bosonic bath, Ohmic pure-dephasing benchmark
+- Bosonic bath, Ohmic spin-boson model beyond pure dephasing
+- Bosonic bath, Ohmic second-moment observable `j_x^(2)`
+- Bosonic bath, sub-Ohmic spin-boson model with `s = 0.5`
+- Spin bath, Ohmic spin-environment model
 
-- `pure_dephasing_ohmic`
-- `beyond_pure_dephasing_ohmic`
-- `beta_compare_ohmic`
-- `jx2_ohmic`
-- `spin_environment_ohmic`
-- `subohmic_s0p5`
-
-In v1, only the pure-dephasing family has a fully parameterized Python solver API. The other families are exposed through curated presets and optional rerun helpers.
-
-By default, the public preset listing shows the lightweight validated presets first. Use `--include-advanced` and `--include-heavy` in the CLI, or the corresponding Python API flags, if you want the broader preset catalog.
-
-## Python-Only Use vs Legacy Reruns
-
-The package works immediately without Fortran if you want to:
-
-- inspect the bundled published figures
-- load the packaged reference tables
-- compute exact pure-dephasing curves
-- export preset assets
-- make plots from the packaged data
-
-You only need Fortran, BLAS, and LAPACK if you want to rerun the legacy solver-backed presets.
-
-The default public path is intentionally light. Presets marked `advanced` or `heavy` are packaged and available, but they are not part of the default lightweight validation lane.
+For the collective-spin examples, pass `N`; the package uses `J = N / 2`.
 
 ## Citation
 
-If you use this package in research, please cite the paper:
+If you use this package in research, please cite the paper. A BibTeX entry is provided in `CITATION.bib`.
 
-- Ali Raza Mirza
-- Muhammad Zia
-- Adam Zaman Chaudhry
-
-*A master equation incorporating the system-environment correlations present in the joint equilibrium state*, arXiv:2012.14853  
-https://arxiv.org/abs/2012.14853
-
-The repository includes:
-
-- `CITATION.bib` for BibTeX users
-- `CITATION.cff` for GitHub/software citation metadata
+```bibtex
+@article{mirza2020masterequation,
+  title = {A master equation incorporating the system-environment correlations present in the joint equilibrium state},
+  author = {Mirza, Ali Raza and Zia, Muhammad and Chaudhry, Adam Zaman},
+  year = {2020},
+  eprint = {2012.14853},
+  archivePrefix = {arXiv},
+  primaryClass = {quant-ph},
+  url = {https://arxiv.org/abs/2012.14853}
+}
+```
 
 ## License
 

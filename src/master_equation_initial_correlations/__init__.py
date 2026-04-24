@@ -1,21 +1,25 @@
-from ._types import Preset, ReferenceCurves, RerunResult
-from .catalog import get_preset, list_presets
-from .fortran_runner import FortranBuildConfig, doctor, rerun_preset
+from ._types import ReferenceCurves, ReferenceExample, RerunResult, SimulationParams, SimulationResult
+from .catalog import get_example, list_examples
+from .fortran_runner import FortranBuildConfig, doctor
 from .pure_dephasing import PureDephasingParams, exact_curves, exact_density_matrices
-from .reference import export_figure_assets, load_reference_curves
+from .reference import export_example_assets, load_reference_curves
+from .simulation import find_reference_example, run_simulation
 
 __all__ = [
     "FortranBuildConfig",
-    "Preset",
     "PureDephasingParams",
     "ReferenceCurves",
+    "ReferenceExample",
     "RerunResult",
+    "SimulationParams",
+    "SimulationResult",
     "doctor",
     "exact_curves",
     "exact_density_matrices",
-    "export_figure_assets",
-    "get_preset",
-    "list_presets",
+    "export_example_assets",
+    "find_reference_example",
+    "get_example",
+    "list_examples",
     "load_reference_curves",
-    "rerun_preset",
+    "run_simulation",
 ]

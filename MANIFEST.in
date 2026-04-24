@@ -1,1 +1,1 @@
-recursive-include src/master_equation_initial_correlations/_assets *.json *.dat *.DAT *.eps *.png *.f *.md
+recursive-include src/master_equation_initial_correlations/_assets *.json *.dat *.DAT *.eps *.png *.f

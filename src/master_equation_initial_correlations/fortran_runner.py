@@ -12,8 +12,7 @@ import numpy as np
 
 from ._resources import copy_resource_tree, ensure_clean_dir, load_table, write_json
 from ._types import ReferenceCurves, RerunResult
-from .catalog import get_preset
-from .plotting import plot_reference_curves
+from .catalog import get_example
 from .pure_dephasing import PureDephasingParams, exact_curves
 
 
@@ -61,13 +60,13 @@ def _max_abs(generated: np.ndarray, reference: np.ndarray) -> float:
     return float(np.max(np.abs(generated - reference)))
 
 
-def _stage_branch(preset_id: str, branch: str, output_dir: Path) -> Path:
-    preset = get_preset(preset_id)
+def _stage_branch(example_id: str, branch: str, output_dir: Path) -> Path:
+    example = get_example(example_id)
     run_dir = output_dir / "runs" / branch
     ensure_clean_dir(run_dir)
-    copy_resource_tree(f"{preset.asset_dir}/inputs", run_dir)
+    copy_resource_tree(f"{example.asset_dir}/inputs", run_dir)
     solver_dir = run_dir / "solver"
-    copy_resource_tree(f"solvers/{preset.solver_id}", solver_dir)
+    copy_resource_tree(f"solvers/{example.solver_id}", solver_dir)
     source_name = "test6wc.f" if branch == "correlated" else "test6woc.f"
     shutil.copy2(solver_dir / source_name, run_dir / source_name)
     shutil.rmtree(solver_dir)
@@ -87,17 +86,14 @@ def _compile_and_run(run_dir: Path, branch: str, config: FortranBuildConfig) -> 
     return {"compile_command": compile_cmd}
 
 
-def rerun_preset(
-    preset_id: str,
+def rerun_example(
+    example_id: str,
     output_dir: str | Path,
     *,
     verify: bool = True,
     render: bool = False,
-    allow_heavy: bool = False,
 ) -> RerunResult:
-    preset = get_preset(preset_id)
-    if preset.execution_profile == "heavy" and not allow_heavy:
-        raise RuntimeError(f"{preset.id} is marked as a heavy preset. Pass allow_heavy=True to rerun it.")
+    example = get_example(example_id)
 
     config = _build_config()
     compiler_path = shutil.which(config.compiler)
@@ -107,15 +103,15 @@ def rerun_preset(
     output_dir = Path(output_dir)
     ensure_clean_dir(output_dir)
 
-    correlated_dir = _stage_branch(preset.id, "correlated", output_dir)
-    uncorrelated_dir = _stage_branch(preset.id, "uncorrelated", output_dir)
+    correlated_dir = _stage_branch(example.id, "correlated", output_dir)
+    uncorrelated_dir = _stage_branch(example.id, "uncorrelated", output_dir)
     correlated_meta = _compile_and_run(correlated_dir, "correlated", config)
     uncorrelated_meta = _compile_and_run(uncorrelated_dir, "uncorrelated", config)
 
     correlated = np.loadtxt(correlated_dir / "EXPX-C.DAT", dtype=float)
     uncorrelated = np.loadtxt(uncorrelated_dir / "EXPX-UNC.DAT", dtype=float)
-    reference_correlated = load_table(f"{preset.asset_dir}/tables/EXPX-C.DAT")
-    reference_uncorrelated = load_table(f"{preset.asset_dir}/tables/EXPX-UNC.DAT")
+    reference_correlated = load_table(f"{example.asset_dir}/tables/EXPX-C.DAT")
+    reference_uncorrelated = load_table(f"{example.asset_dir}/tables/EXPX-UNC.DAT")
 
     correlated_error = _max_abs(correlated, reference_correlated) if verify else 0.0
     uncorrelated_error = _max_abs(uncorrelated, reference_uncorrelated) if verify else 0.0
@@ -124,43 +120,45 @@ def rerun_preset(
     jz_uncorrelated_error = None
     if (correlated_dir / "EXPZ-C.DAT").exists():
         jz_correlated = np.loadtxt(correlated_dir / "EXPZ-C.DAT", dtype=float)
-        jz_reference = load_table(f"{preset.asset_dir}/tables/EXPZ-C.DAT")
+        jz_reference = load_table(f"{example.asset_dir}/tables/EXPZ-C.DAT")
         jz_correlated_error = _max_abs(jz_correlated, jz_reference) if verify else 0.0
     if (uncorrelated_dir / "EXPZ-UNC.DAT").exists():
         jz_uncorrelated = np.loadtxt(uncorrelated_dir / "EXPZ-UNC.DAT", dtype=float)
-        jz_reference = load_table(f"{preset.asset_dir}/tables/EXPZ-UNC.DAT")
+        jz_reference = load_table(f"{example.asset_dir}/tables/EXPZ-UNC.DAT")
         jz_uncorrelated_error = _max_abs(jz_uncorrelated, jz_reference) if verify else 0.0
 
     exact_correlated_error = None
     exact_uncorrelated_error = None
     exact_correlated = None
     exact_uncorrelated = None
-    if preset.supports_exact:
+    if example.supports_exact:
         params = PureDephasingParams(
-            J=float(preset.parameters["J"]),
-            epsilon=float(preset.parameters["epsilon"]),
-            xi=float(preset.parameters["epsilon_0"]),
-            beta=float(preset.parameters["beta"]),
-            G=float(preset.parameters["G"]),
-            omega_c=float(preset.parameters["omega_c"]),
+            J=float(example.parameters["J"]),
+            epsilon=float(example.parameters["epsilon"]),
+            xi=float(example.parameters["epsilon_0"]),
+            beta=float(example.parameters["beta"]),
+            G=float(example.parameters["G"]),
+            omega_c=float(example.parameters["omega_c"]),
         )
         exact_correlated, exact_uncorrelated = exact_curves(params)
         if verify:
-            ref_exact_correlated = load_table(f"{preset.asset_dir}/tables/exact-correlated.dat")
-            ref_exact_uncorrelated = load_table(f"{preset.asset_dir}/tables/exact-uncorrelated.dat")
+            ref_exact_correlated = load_table(f"{example.asset_dir}/tables/exact-correlated.dat")
+            ref_exact_uncorrelated = load_table(f"{example.asset_dir}/tables/exact-uncorrelated.dat")
             exact_correlated_error = _max_abs(exact_correlated, ref_exact_correlated)
             exact_uncorrelated_error = _max_abs(exact_uncorrelated, ref_exact_uncorrelated)
 
     rendered_eps = None
     rendered_png = None
     if render:
+        from .plotting import plot_reference_curves
+
         plot_correlated = np.array(correlated, copy=True)
         plot_uncorrelated = np.array(uncorrelated, copy=True)
-        if preset.plot_divisor != 1.0:
-            plot_correlated[:, 1] = plot_correlated[:, 1] / preset.plot_divisor
-            plot_uncorrelated[:, 1] = plot_uncorrelated[:, 1] / preset.plot_divisor
+        if example.plot_divisor != 1.0:
+            plot_correlated[:, 1] = plot_correlated[:, 1] / example.plot_divisor
+            plot_uncorrelated[:, 1] = plot_uncorrelated[:, 1] / example.plot_divisor
         curves = ReferenceCurves(
-            preset=preset,
+            example=example,
             correlated=plot_correlated,
             uncorrelated=plot_uncorrelated,
             exact_correlated=exact_correlated,
@@ -171,7 +169,7 @@ def rerun_preset(
         rendered_png = outputs["png"]
 
     summary = {
-        "preset_id": preset.id,
+        "example_id": example.public_id,
         "compiler": compiler_path,
         "build": asdict(config),
         "fortran": {
@@ -190,7 +188,7 @@ def rerun_preset(
     summary_path = output_dir / "regeneration_summary.json"
     write_json(summary_path, summary)
     return RerunResult(
-        preset=preset,
+        example=example,
         output_dir=output_dir,
         correlated_error=correlated_error,
         uncorrelated_error=uncorrelated_error,

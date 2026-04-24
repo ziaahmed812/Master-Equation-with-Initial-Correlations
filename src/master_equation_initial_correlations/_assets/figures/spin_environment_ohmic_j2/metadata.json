@@ -1,13 +1,12 @@
 {
-  "preset_id": "spin_environment_ohmic_j2",
-  "figure_id": "F11_Spin-E-Ohmic-J=2",
+  "example_id": "spin_environment_ohmic_j2",
   "paper_figure_number": 13,
   "family": "spin_environment_ohmic",
-  "label": "Ohmic spin environment (J=2)",
+  "label": "Ohmic spin bath (J=2)",
   "paper_asset": "Spin-E-Ohmic-J=2.eps",
   "observable": "jx",
   "solver_id": "spin_environment/J2",
-  "execution_profile": "light",
+  "execution_profile": "standard",
   "supports_exact": false,
   "supports_rerun": true,
   "parameters": {
@@ -33,7 +32,6 @@
     "plot_divisor": 1.0
   },
   "aliases": [
-    "F11_Spin-E-Ohmic-J=2",
     "Spin-E-Ohmic-J=2"
   ],
   "paths": {

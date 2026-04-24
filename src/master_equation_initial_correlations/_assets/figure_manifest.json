@@ -1,15 +1,14 @@
 {
-  "presets": [
+  "examples": [
     {
-      "preset_id": "pure_dephasing_ohmic_j0p5",
-      "figure_id": "F09_Puredephasing-N=1-unitary",
+      "example_id": "pure_dephasing_ohmic_j0p5",
       "paper_figure_number": 1,
       "family": "pure_dephasing_ohmic",
       "label": "Pure dephasing benchmark (J=0.5)",
       "paper_asset": "Puredephasing-N=1-unitary.eps",
       "observable": "jx",
       "solver_id": "pure_dephasing/J0p5",
-      "execution_profile": "light",
+      "execution_profile": "standard",
       "supports_exact": true,
       "supports_rerun": true,
       "parameters": {
@@ -35,7 +34,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F09_Puredephasing-N=1-unitary",
         "Puredephasing-N=1-unitary"
       ],
       "paths": {
@@ -47,15 +45,14 @@
       }
     },
     {
-      "preset_id": "pure_dephasing_ohmic_j2",
-      "figure_id": "F10_Puredephasing-N=4-unitary",
+      "example_id": "pure_dephasing_ohmic_j2",
       "paper_figure_number": 2,
       "family": "pure_dephasing_ohmic",
       "label": "Pure dephasing benchmark (J=2)",
       "paper_asset": "Puredephasing-N=4-unitary.eps",
       "observable": "jx",
       "solver_id": "pure_dephasing/J2",
-      "execution_profile": "light",
+      "execution_profile": "standard",
       "supports_exact": true,
       "supports_rerun": true,
       "parameters": {
@@ -81,7 +78,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F10_Puredephasing-N=4-unitary",
         "Puredephasing-N=4-unitary"
       ],
       "paths": {
@@ -93,15 +89,14 @@
       }
     },
     {
-      "preset_id": "pure_dephasing_ohmic_j5",
-      "figure_id": "F08_Puredephasing-N=10-unitary",
+      "example_id": "pure_dephasing_ohmic_j5",
       "paper_figure_number": 3,
       "family": "pure_dephasing_ohmic",
       "label": "Pure dephasing benchmark (J=5)",
       "paper_asset": "Puredephasing-N=10-unitary.eps",
       "observable": "jx",
       "solver_id": "pure_dephasing/J5",
-      "execution_profile": "heavy",
+      "execution_profile": "long",
       "supports_exact": true,
       "supports_rerun": true,
       "parameters": {
@@ -127,7 +122,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F08_Puredephasing-N=10-unitary",
         "Puredephasing-N=10-unitary"
       ],
       "paths": {
@@ -139,15 +133,14 @@
       }
     },
     {
-      "preset_id": "beyond_pure_dephasing_ohmic_j1",
-      "figure_id": "F02_Beyond-PD-N=2new",
+      "example_id": "beyond_pure_dephasing_ohmic_j1",
       "paper_figure_number": 4,
       "family": "beyond_pure_dephasing_ohmic",
       "label": "Beyond pure dephasing (J=1)",
       "paper_asset": "Beyond-PD-N=2new.eps",
       "observable": "jx",
       "solver_id": "beyond_pd/J1",
-      "execution_profile": "light",
+      "execution_profile": "standard",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -173,7 +166,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F02_Beyond-PD-N=2new",
         "Beyond-PD-N=2new"
       ],
       "paths": {
@@ -185,15 +177,14 @@
       }
     },
     {
-      "preset_id": "beyond_pure_dephasing_ohmic_j2",
-      "figure_id": "F03_Beyond-PD-N=4new",
+      "example_id": "beyond_pure_dephasing_ohmic_j2",
       "paper_figure_number": 5,
       "family": "beyond_pure_dephasing_ohmic",
       "label": "Beyond pure dephasing (J=2)",
       "paper_asset": "Beyond-PD-N=4new.eps",
       "observable": "jx",
       "solver_id": "beyond_pd/J2",
-      "execution_profile": "light",
+      "execution_profile": "standard",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -219,7 +210,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F03_Beyond-PD-N=4new",
         "Beyond-PD-N=4new"
       ],
       "paths": {
@@ -231,15 +221,14 @@
       }
     },
     {
-      "preset_id": "beyond_pure_dephasing_ohmic_j5",
-      "figure_id": "F01_Beyond-PD-N=10",
+      "example_id": "beyond_pure_dephasing_ohmic_j5",
       "paper_figure_number": 6,
       "family": "beyond_pure_dephasing_ohmic",
       "label": "Beyond pure dephasing (J=5)",
       "paper_asset": "Beyond-PD-N=10.eps",
       "observable": "jx",
       "solver_id": "beyond_pd/J5",
-      "execution_profile": "heavy",
+      "execution_profile": "long",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -265,7 +254,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F01_Beyond-PD-N=10",
         "Beyond-PD-N=10"
       ],
       "paths": {
@@ -277,15 +265,14 @@
       }
     },
     {
-      "preset_id": "beta_compare_ohmic_beta0p5_j5",
-      "figure_id": "F04_fig6-beta=0.5new",
+      "example_id": "beta_compare_ohmic_beta0p5_j5",
       "paper_figure_number": 7,
       "family": "beta_compare_ohmic",
       "label": "Beta comparison (beta=0.5, J=5)",
       "paper_asset": "fig6-beta=0.5new.eps",
       "observable": "jx",
       "solver_id": "beta_compare/beta0.5_J5",
-      "execution_profile": "advanced",
+      "execution_profile": "extended",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -311,7 +298,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F04_fig6-beta=0.5new",
         "fig6-beta=0.5new"
       ],
       "paths": {
@@ -323,15 +309,14 @@
       }
     },
     {
-      "preset_id": "beta_compare_ohmic_beta1p5_j5",
-      "figure_id": "F05_fig6beta=1.5new",
+      "example_id": "beta_compare_ohmic_beta1p5_j5",
       "paper_figure_number": 8,
       "family": "beta_compare_ohmic",
       "label": "Beta comparison (beta=1.5, J=5)",
       "paper_asset": "fig6beta=1.5new.eps",
       "observable": "jx",
       "solver_id": "beta_compare/beta1.5_J5",
-      "execution_profile": "advanced",
+      "execution_profile": "extended",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -357,7 +342,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F05_fig6beta=1.5new",
         "fig6beta=1.5new"
       ],
       "paths": {
@@ -369,15 +353,14 @@
       }
     },
     {
-      "preset_id": "jx2_ohmic_j2",
-      "figure_id": "F07_Jx_2-plot-for-N=4",
+      "example_id": "jx2_ohmic_j2",
       "paper_figure_number": 9,
       "family": "jx2_ohmic",
       "label": "Second-moment Jx benchmark (J=2)",
       "paper_asset": "Jx_2-plot-for-N=4.eps",
       "observable": "jx2",
       "solver_id": "jx2/J2",
-      "execution_profile": "light",
+      "execution_profile": "standard",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -403,7 +386,6 @@
         "plot_divisor": 4.0
       },
       "aliases": [
-        "F07_Jx_2-plot-for-N=4",
         "Jx_2-plot-for-N=4"
       ],
       "paths": {
@@ -415,15 +397,14 @@
       }
     },
     {
-      "preset_id": "jx2_ohmic_j5",
-      "figure_id": "F06_Jx_2-plot-for-N=10",
+      "example_id": "jx2_ohmic_j5",
       "paper_figure_number": 10,
       "family": "jx2_ohmic",
       "label": "Second-moment Jx benchmark (J=5)",
       "paper_asset": "Jx_2-plot-for-N=10.eps",
       "observable": "jx2",
       "solver_id": "jx2/J5",
-      "execution_profile": "heavy",
+      "execution_profile": "long",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -449,7 +430,6 @@
         "plot_divisor": 10.0
       },
       "aliases": [
-        "F06_Jx_2-plot-for-N=10",
         "Jx_2-plot-for-N=10"
       ],
       "paths": {
@@ -461,15 +441,14 @@
       }
     },
     {
-      "preset_id": "subohmic_s0p5_j2",
-      "figure_id": "F13_subOhmic-S=0.5,J=2",
+      "example_id": "subohmic_s0p5_j2",
       "paper_figure_number": 11,
       "family": "subohmic_s0p5",
-      "label": "Sub-Ohmic spin environment (J=2)",
+      "label": "Sub-Ohmic bosonic bath (J=2)",
       "paper_asset": "subOhmic-S=0.5,J=2.eps",
       "observable": "jx",
       "solver_id": "subohmic/J2",
-      "execution_profile": "light",
+      "execution_profile": "standard",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -496,7 +475,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F13_subOhmic-S=0.5,J=2",
         "subOhmic-S=0.5,J=2"
       ],
       "paths": {
@@ -508,15 +486,14 @@
       }
     },
     {
-      "preset_id": "subohmic_s0p5_j5",
-      "figure_id": "F14_subOhmic-S=0.5,J=5",
+      "example_id": "subohmic_s0p5_j5",
       "paper_figure_number": 12,
       "family": "subohmic_s0p5",
-      "label": "Sub-Ohmic spin environment (J=5)",
+      "label": "Sub-Ohmic bosonic bath (J=5)",
       "paper_asset": "subOhmic-S=0.5,J=5.eps",
       "observable": "jx",
       "solver_id": "subohmic/J5",
-      "execution_profile": "heavy",
+      "execution_profile": "long",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -543,7 +520,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F14_subOhmic-S=0.5,J=5",
         "subOhmic-S=0.5,J=5"
       ],
       "paths": {
@@ -555,15 +531,14 @@
       }
     },
     {
-      "preset_id": "spin_environment_ohmic_j2",
-      "figure_id": "F11_Spin-E-Ohmic-J=2",
+      "example_id": "spin_environment_ohmic_j2",
       "paper_figure_number": 13,
       "family": "spin_environment_ohmic",
-      "label": "Ohmic spin environment (J=2)",
+      "label": "Ohmic spin bath (J=2)",
       "paper_asset": "Spin-E-Ohmic-J=2.eps",
       "observable": "jx",
       "solver_id": "spin_environment/J2",
-      "execution_profile": "light",
+      "execution_profile": "standard",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -589,7 +564,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F11_Spin-E-Ohmic-J=2",
         "Spin-E-Ohmic-J=2"
       ],
       "paths": {
@@ -601,15 +575,14 @@
       }
     },
     {
-      "preset_id": "spin_environment_ohmic_j5",
-      "figure_id": "F12_Spin-E-Ohmic-J=5",
+      "example_id": "spin_environment_ohmic_j5",
       "paper_figure_number": 14,
       "family": "spin_environment_ohmic",
-      "label": "Ohmic spin environment (J=5)",
+      "label": "Ohmic spin bath (J=5)",
       "paper_asset": "Spin-E-Ohmic-J=5.eps",
       "observable": "jx",
       "solver_id": "spin_environment/J5",
-      "execution_profile": "advanced",
+      "execution_profile": "extended",
       "supports_exact": false,
       "supports_rerun": true,
       "parameters": {
@@ -635,7 +608,6 @@
         "plot_divisor": 1.0
       },
       "aliases": [
-        "F12_Spin-E-Ohmic-J=5",
         "Spin-E-Ohmic-J=5"
       ],
       "paths": {

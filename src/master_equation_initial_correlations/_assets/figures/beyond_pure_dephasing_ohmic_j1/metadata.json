@@ -1,13 +1,12 @@
 {
-  "preset_id": "beyond_pure_dephasing_ohmic_j1",
-  "figure_id": "F02_Beyond-PD-N=2new",
+  "example_id": "beyond_pure_dephasing_ohmic_j1",
   "paper_figure_number": 4,
   "family": "beyond_pure_dephasing_ohmic",
   "label": "Beyond pure dephasing (J=1)",
   "paper_asset": "Beyond-PD-N=2new.eps",
   "observable": "jx",
   "solver_id": "beyond_pd/J1",
-  "execution_profile": "light",
+  "execution_profile": "standard",
   "supports_exact": false,
   "supports_rerun": true,
   "parameters": {
@@ -33,7 +32,6 @@
     "plot_divisor": 1.0
   },
   "aliases": [
-    "F02_Beyond-PD-N=2new",
     "Beyond-PD-N=2new"
   ],
   "paths": {

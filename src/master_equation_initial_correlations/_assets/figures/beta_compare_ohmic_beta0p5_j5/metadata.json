@@ -1,13 +1,12 @@
 {
-  "preset_id": "beta_compare_ohmic_beta0p5_j5",
-  "figure_id": "F04_fig6-beta=0.5new",
+  "example_id": "beta_compare_ohmic_beta0p5_j5",
   "paper_figure_number": 7,
   "family": "beta_compare_ohmic",
   "label": "Beta comparison (beta=0.5, J=5)",
   "paper_asset": "fig6-beta=0.5new.eps",
   "observable": "jx",
   "solver_id": "beta_compare/beta0.5_J5",
-  "execution_profile": "advanced",
+  "execution_profile": "extended",
   "supports_exact": false,
   "supports_rerun": true,
   "parameters": {
@@ -33,7 +32,6 @@
     "plot_divisor": 1.0
   },
   "aliases": [
-    "F04_fig6-beta=0.5new",
     "fig6-beta=0.5new"
   ],
   "paths": {

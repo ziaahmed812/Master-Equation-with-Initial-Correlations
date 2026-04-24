@@ -5,7 +5,7 @@ from master_equation_initial_correlations.plotting import apply_paper_axes_style
 
 
 def test_plot_reference_curves_writes_eps_and_png(tmp_path: Path) -> None:
-    curves = load_reference_curves("pure_dephasing_ohmic_j2")
+    curves = load_reference_curves("pure-dephasing-ohmic-N4")
     outputs = plot_reference_curves(curves, tmp_path)
     assert outputs["eps"].exists()
     assert outputs["png"].exists()

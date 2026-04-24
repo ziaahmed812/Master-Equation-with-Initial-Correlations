@@ -2,14 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
 import numpy as np
 
 from ._types import ReferenceCurves
+
+
+def _pyplot():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    return plt
 
 
 def _axis_spec(observable: str, x_range: tuple[float, float]) -> dict[str, object]:
@@ -55,10 +59,11 @@ def apply_paper_axes_style(ax, *, observable: str, x_range: tuple[float, float],
 
 
 def plot_reference_curves(curves: ReferenceCurves, output_dir: str | Path, filename: str | None = None) -> dict[str, Path | dict[str, object]]:
+    plt = _pyplot()
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    paper_asset = filename or curves.preset.paper_asset
+    paper_asset = filename or curves.example.paper_asset
     stem = Path(paper_asset).stem
 
     fig, ax = plt.subplots(figsize=(6.0, 4.0))
@@ -101,9 +106,9 @@ def plot_reference_curves(curves: ReferenceCurves, output_dir: str | Path, filen
 
     axis_style = apply_paper_axes_style(
         ax,
-        observable=curves.preset.observable,
-        x_range=curves.preset.x_range,
-        y_range=curves.preset.y_range,
+        observable=curves.example.observable,
+        x_range=curves.example.x_range,
+        y_range=curves.example.y_range,
     )
     fig.tight_layout()
 

@@ -59,11 +59,10 @@ master_equation_initial_correlations = [
   "_assets/figures/**/*.eps",
   "_assets/figures/**/*.png",
   "_assets/solvers/**/*.f",
-  "_assets/solvers/**/*.md",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-  "light_rerun: tests that compile and run lightweight legacy solver presets",
+  "solver_rerun: tests that compile and run small legacy solver examples",
 ]

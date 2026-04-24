@@ -1,13 +1,12 @@
 {
-  "preset_id": "pure_dephasing_ohmic_j0p5",
-  "figure_id": "F09_Puredephasing-N=1-unitary",
+  "example_id": "pure_dephasing_ohmic_j0p5",
   "paper_figure_number": 1,
   "family": "pure_dephasing_ohmic",
   "label": "Pure dephasing benchmark (J=0.5)",
   "paper_asset": "Puredephasing-N=1-unitary.eps",
   "observable": "jx",
   "solver_id": "pure_dephasing/J0p5",
-  "execution_profile": "light",
+  "execution_profile": "standard",
   "supports_exact": true,
   "supports_rerun": true,
   "parameters": {
@@ -33,7 +32,6 @@
     "plot_divisor": 1.0
   },
   "aliases": [
-    "F09_Puredephasing-N=1-unitary",
     "Puredephasing-N=1-unitary"
   ],
   "paths": {
