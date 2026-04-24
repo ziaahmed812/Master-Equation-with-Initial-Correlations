@@ -105,7 +105,7 @@ def doctor() -> dict[str, object]:
                 )
             )
             binary = tmp_path / "lapack_smoke.out"
-            cmd = [config.compiler, str(source), "-o", str(binary), *config.link_args]
+            cmd = [config.compiler, *config.flags, str(source), "-o", str(binary), *config.link_args]
             try:
                 subprocess.run(cmd, cwd=tmp_path, check=True, capture_output=True, text=True)
                 smoke["compile"] = True
@@ -204,6 +204,27 @@ def _expectation_complex_block() -> str:
             "\tEND DO",
             "\tANS = SUMM",
             "\tEND SUBROUTINE EXPECTATION_COMPLEX",
+            "",
+        ]
+    )
+
+
+def _densitymatrix_public_block() -> str:
+    return "\n".join(
+        [
+            "",
+            "\tSUBROUTINE DENSITYMATRIX_PUBLIC(X,MATOUT)",
+            "\tIMPLICIT NONE",
+            "\tCOMPLEX*16,DIMENSION(DIMMAT, 1),INTENT(IN)::X",
+            "\tCOMPLEX*16,DIMENSION(DIMSYS, DIMSYS),INTENT(OUT)::MATOUT",
+            "\tCOMPLEX*16,DIMENSION(DIMSYS, DIMSYS)::RHO",
+            "\tCOMPLEX*16,DIMENSION(DIMSYS, DIMSYS)::R",
+            "\tCOMPLEX*16,DIMENSION(DIMSYS, DIMSYS)::RT",
+            "\tCALL UROT(R)",
+            "\tCALL DENSITYMATRIX(X,RHO)",
+            "\tRT = DCONJG(TRANSPOSE(R))",
+            "\tMATOUT = MATMUL(RT,MATMUL(RHO,R))",
+            "\tEND SUBROUTINE DENSITYMATRIX_PUBLIC",
             "",
         ]
     )
@@ -321,6 +342,11 @@ def _parameterize_source(source: str, *, branch: str) -> str:
         f"\tEND SUBROUTINE EXPECTATION\n{_expectation_complex_block()}\n",
         1,
     )
+    source = source.replace(
+        "\tEND SUBROUTINE DENSITYMATRIX_EB\n",
+        f"\tEND SUBROUTINE DENSITYMATRIX_EB\n{_densitymatrix_public_block()}\n",
+        1,
+    )
     source, correlator_replacements = re.subn(
         r"\tCOMPLEX\*16 FUNCTION CORRELATOR\(TAU\).*?\n\tEND FUNCTION CORRELATOR",
         _generic_correlator_block(),
@@ -348,7 +374,13 @@ def _parameterize_source(source: str, *, branch: str) -> str:
         "\tREAL(KIND = DBL) :: Z_EXPECTATION, X_EXPECTATION",
         "\tREAL(KIND = DBL) :: Z_EXPECTATION, X_EXPECTATION\n"
         "\tCOMPLEX*16 :: OBS_EXPECTATION\n"
-        "\tINTEGER :: OBS_INDEX",
+        "\tINTEGER :: OBS_INDEX, OBS_I, OBS_J",
+        1,
+    )
+    source = source.replace(
+        "\tCOMPLEX*16, DIMENSION(DIMSYS,DIMSYS)::RHO_EB",
+        "\tCOMPLEX*16, DIMENSION(DIMSYS,DIMSYS)::RHO_EB\n"
+        "\tCOMPLEX*16, DIMENSION(DIMSYS,DIMSYS)::RHO_PUBLIC",
         1,
     )
     source = source.replace(
@@ -356,7 +388,8 @@ def _parameterize_source(source: str, *, branch: str) -> str:
         "\tWRITE(3,*) T, X_EXPECTATION/JSYS\n"
         "\tCALL EXPECTATION_COMPLEX(X,OBSERVABLE_EB, OBS_EXPECTATION)\n"
         "\tWRITE(11,*) T, DREAL(OBS_EXPECTATION)/JSYS, DIMAG(OBS_EXPECTATION)/JSYS\n"
-        "\tIF (SAVE_DENSITY .EQ. 1) WRITE(12,*) T, (DREAL(X(OBS_INDEX,1)), DIMAG(X(OBS_INDEX,1)), OBS_INDEX = 1, DIMMAT)",
+        "\tIF (SAVE_DENSITY .EQ. 1) CALL DENSITYMATRIX_PUBLIC(X,RHO_PUBLIC)\n"
+        "\tIF (SAVE_DENSITY .EQ. 1) WRITE(12,*) T, ((DREAL(RHO_PUBLIC(OBS_I,OBS_J)), DIMAG(RHO_PUBLIC(OBS_I,OBS_J)), OBS_J = 1, DIMSYS), OBS_I = 1, DIMSYS)",
         1,
     )
     source, bath_read_replacements = re.subn(
@@ -770,7 +803,7 @@ def run_parameterized_fortran_branch(
             params,
             run_dir / density_name,
             output_dir / density_name,
-            columns="t followed by real/imag pairs for the internal Fortran density vector",
+            columns="t followed by row-major real/imag pairs for the reduced system density matrix",
             numerics=numerics,
         )
 
@@ -946,14 +979,14 @@ def run_parameterized_fortran(
             params,
             correlated_dir / "density-correlated.dat",
             output_dir / "density-correlated.dat",
-            columns="t followed by real/imag pairs for the internal Fortran density vector",
+            columns="t followed by row-major real/imag pairs for the reduced system density matrix",
             numerics=numerics,
         )
         output_files["density_uncorrelated"] = _copy_generated_text_with_header(
             params,
             uncorrelated_dir / "density-uncorrelated.dat",
             output_dir / "density-uncorrelated.dat",
-            columns="t followed by real/imag pairs for the internal Fortran density vector",
+            columns="t followed by row-major real/imag pairs for the reduced system density matrix",
             numerics=numerics,
         )
 

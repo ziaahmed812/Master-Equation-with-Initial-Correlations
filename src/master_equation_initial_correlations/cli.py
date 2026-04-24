@@ -85,9 +85,13 @@ def _cmd_run(args: argparse.Namespace) -> int:
             correlations=args.branch,
             model=args.model,
             numerics=_numerics(args),
+            keep_artifacts=args.artifacts,
             verbose=not args.quiet,
         )
-    destination = result.save(args.out, include_artifacts=args.artifacts, overwrite=args.overwrite)
+    try:
+        destination = result.save(args.out, include_artifacts=args.artifacts, overwrite=args.overwrite)
+    finally:
+        result.close()
     print(
         json.dumps(
             {
@@ -127,7 +131,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--s", type=float, help="Spectral exponent: use 1.0 for Ohmic, 0<s<1 for sub-Ohmic, and s>1 for super-Ohmic.")
     run_parser.add_argument("--tmax", type=float, default=5.0)
     run_parser.add_argument("--dt", type=float, default=0.1)
-    run_parser.add_argument("--out", type=Path, required=True)
+    run_parser.add_argument("--out", type=Path, default=Path("."), help="Output directory; defaults to the current working directory.")
     run_parser.add_argument("--artifacts", action="store_true", help="Also save generated .dat inputs, Fortran sources, and logs.")
     run_parser.add_argument("--overwrite", action="store_true")
     run_parser.add_argument("--quiet", action="store_true")

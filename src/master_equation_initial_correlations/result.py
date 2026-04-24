@@ -49,17 +49,54 @@ class Result:
     artifact_dirs: dict[str, Path] = field(default_factory=dict)
     _temporary_directories: list[Any] = field(default_factory=list, repr=False)
 
+    def __enter__(self) -> "Result":
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        self.close()
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a copy-friendly dictionary of the in-memory solver result."""
+
+        return {
+            "times": self.times.copy(),
+            "expect": {label: np.asarray(values).copy() for label, values in zip(self.e_ops, self.expect)},
+            "states": None if self.states is None else self.states.copy(),
+            "branch": self.branch,
+            "solver": self.solver,
+            "observables": list(self.e_ops),
+            "metadata": dict(self.metadata),
+        }
+
+    def to_dataframe(self) -> Any:
+        """Return expectation values as a pandas DataFrame if pandas is installed."""
+
+        try:
+            import pandas as pd
+        except ImportError as exc:
+            raise ImportError("Result.to_dataframe() requires pandas; install pandas to use this helper.") from exc
+        data: dict[str, np.ndarray] = {"t": self.times}
+        for label, values in zip(self.e_ops, self.expect):
+            data[label] = np.asarray(values)
+        return pd.DataFrame(data)
+
     def save(self, output_dir: str | Path, *, include_artifacts: bool = False, overwrite: bool = False) -> Path:
         """Save expectation data, metadata, and optional generated artifacts."""
 
         destination = Path(output_dir)
         if include_artifacts:
             if not self.artifact_dirs:
-                raise FileNotFoundError("include_artifacts=True was requested, but this Result has no artifact directories.")
+                raise FileNotFoundError(
+                    "include_artifacts=True was requested, but this Result has no retained artifacts. "
+                    "For Fortran-backed runs, call meic.solve(..., keep_artifacts=True) and save before close()."
+                )
             missing = [f"{label}: {source}" for label, source in self.artifact_dirs.items() if not source.exists()]
             if missing:
                 joined = "; ".join(missing)
-                raise FileNotFoundError(f"include_artifacts=True was requested, but artifact directories are unavailable: {joined}.")
+                raise FileNotFoundError(
+                    f"include_artifacts=True was requested, but artifact directories are unavailable: {joined}. "
+                    "For Fortran-backed runs, rerun with keep_artifacts=True and save before close()."
+                )
         expected_files = [f"expect-{_safe_name(label)}.dat" for label in self.e_ops] + ["result_metadata.json"]
         conflicts = [name for name in expected_files if (destination / name).exists()]
         if include_artifacts and (destination / "artifacts").exists():
@@ -91,6 +128,21 @@ class Result:
             ]
             write_table(destination / f"expect-{_safe_name(label)}.dat", table, header_lines=header)
 
+        observable_parameters = self.metadata.get("observable_parameters")
+        if observable_parameters is None:
+            parameters_by_observable = {self.e_ops[0]: getattr(self.params, "__dict__", str(self.params))} if self.e_ops else {}
+        else:
+            parameters_by_observable = {
+                label: getattr(params, "__dict__", str(params))
+                for label, params in zip(self.e_ops, observable_parameters)
+            }
+        parameters = getattr(self.params, "__dict__", str(self.params))
+        if len(self.e_ops) > 1:
+            parameters = {
+                "note": "multiple observables were calculated; see parameters_by_observable for observable-specific provenance",
+                "first_observable": parameters,
+            }
+
         metadata = {
             "solver": self.solver,
             "branch": self.branch,
@@ -101,7 +153,8 @@ class Result:
                 "count": int(self.times.size),
                 "dt": float(self.times[1] - self.times[0]) if self.times.size > 1 else None,
             },
-            "parameters": getattr(self.params, "__dict__", str(self.params)),
+            "parameters": parameters,
+            "parameters_by_observable": parameters_by_observable,
             "metadata": self.metadata,
             "artifacts_available": {label: str(path) for label, path in self.artifact_dirs.items()},
         }

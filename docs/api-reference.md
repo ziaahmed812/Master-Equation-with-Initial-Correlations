@@ -27,6 +27,13 @@ bath = meic.BathParams(bath_type="spin", kind="superohmic", s=3.0, beta=1.0, cou
 `"subohmic"`, or `"superohmic"`. Ohmic spectra use `s=1.0`; sub-Ohmic spectra
 require `0 < s < 1`; super-Ohmic spectra require `s > 1`.
 
+The implemented spectral weight is proportional to
+`coupling * omega**s * omega_c**(1-s) * exp(-omega / omega_c)`. Arbitrary
+user-defined spectral-density callables are not part of this public API yet.
+For `kind="subohmic", s=0.5`, the package preserves the paper-code convention:
+the dissipative kernel uses the legacy analytic branch and `C.dat` keeps the
+extra cutoff used in the published Mathematica/Fortran workflow.
+
 `NumericsConfig` controls the bath-integral grids used to generate coefficient
 and correlation tables:
 
@@ -61,8 +68,8 @@ result = meic.solve(
 `bath_type` determines the physical backend: bosonic bath uses the spin-boson
 master-equation workflow, and spin bath uses the spin-environment workflow.
 
-Fortran-backed runs require a one-dimensional, strictly increasing, uniformly
-spaced `tlist` starting at `0.0`.
+Public solver runs currently require a one-dimensional, strictly increasing,
+uniformly spaced `tlist` starting at `0.0`.
 
 ## Exact Solver
 
@@ -86,20 +93,29 @@ result.times      # NumPy array of returned solver times
 result.expect     # list of expectation arrays in e_ops order
 result.e_data     # dict keyed by observable label
 result.states     # density matrices when requested and available
+result.as_dict()  # copy-friendly dictionary of arrays and metadata
 ```
 
 Default behavior is RAM-only. Export is explicit:
 
 ```python
 result.save("my-run")
+```
+
+Normal solver calls clean temporary backend staging folders before returning.
+For provenance export, request artifact retention explicitly:
+
+```python
+result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], keep_artifacts=True)
 result.save("my-run-with-artifacts", include_artifacts=True)
 result.close()
 ```
 
 `include_artifacts=True` copies generated input tables, Fortran sources/logs,
-and provenance files. It raises an error if those artifacts are unavailable.
-`result.close()` removes temporary Fortran staging folders held alive by the
-result object.
+and provenance files. It raises an error if artifacts were not retained or are
+no longer available. For Fortran-backed runs, `save_density=True` fills
+`result.states` with reconstructed reduced density matrices in the public
+collective-spin basis.
 
 ## Observables
 
@@ -118,7 +134,9 @@ e_ops = [meic.jx(system), meic.jz(system)]
 
 `jx^2` follows the paper normalization `4 <J_x^2> / N^2`. Non-Hermitian
 observables are allowed and produce a warning because complex expectation
-values may be expected.
+values may be expected. Custom matrix observables must follow the same
+dimensionless convention as the string observables: pass `J_x / J`, not the
+physical matrix `J_x`, when you want `"jx"` normalization.
 
 For Fortran-backed master-equation runs, each observable currently triggers a
 separate numerical run. Multi-observable calls are therefore more expensive
@@ -142,19 +160,11 @@ The `correlations` argument selects the dynamical branch:
 - `"with"` keeps the initial system-bath correlation terms.
 - `"without"` runs the corresponding uncorrelated comparison branch.
 
-Advanced users may pass a custom reduced system density matrix:
-
-```python
-dim = system.N + 1
-rho0 = np.eye(dim, dtype=complex) / dim
-
-result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], initial_state=rho0)
-```
-
-The custom matrix must be Hermitian, positive semidefinite, trace-one, and have
-shape `(N + 1, N + 1)`. It replaces the reduced system state sent to the
-numerical backend; it does not define a full custom joint system-bath density
-operator.
+The public master-equation API does not accept a custom `initial_state` yet. A
+custom reduced density matrix alone would not define the joint system-bath
+correlations in the `correlations="with"` branch, so the public solver keeps
+the preparation protocol tied to the paper's correlated-equilibrium
+construction.
 
 The exact pure-dephasing solver uses its analytical correlated or uncorrelated
 construction and does not accept a custom initial state.

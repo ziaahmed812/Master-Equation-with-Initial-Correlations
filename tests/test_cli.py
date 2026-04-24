@@ -33,6 +33,27 @@ def test_cli_run_exact_pure_dephasing_saves_result(tmp_path: Path, capsys) -> No
     assert (tmp_path / "expect-jx.dat").exists()
 
 
+def test_cli_run_defaults_to_current_directory(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+    code = main([
+        "run",
+        "--model", "pure-dephasing",
+        "--branch", "wc",
+        "--N", "1",
+        "--epsilon0", "4",
+        "--epsilon", "4",
+        "--delta0", "0",
+        "--delta", "0",
+        "--tmax", "0.1",
+        "--dt", "0.1",
+    ])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert code == 0
+    assert payload["output_dir"] == "."
+    assert (tmp_path / "expect-jx.dat").exists()
+
+
 def test_cli_rejects_incompatible_bath_model(capsys) -> None:
     code = main([
         "run",

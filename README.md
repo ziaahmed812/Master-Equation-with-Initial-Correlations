@@ -30,6 +30,11 @@ parameter sets are the validated benchmarks; other parameter choices are
 executable with exposed numerical controls, and should be checked for
 convergence in the usual way.
 
+The public master-equation API uses the paper preparation protocol by default:
+the reduced system density matrix is generated from the joint equilibrium
+state of the system and environment. Fully custom joint initial states are not
+part of this public interface yet.
+
 ## Install
 
 ```bash
@@ -113,10 +118,9 @@ This exact solver is valid for bosonic Ohmic pure dephasing with
 
 The default master-equation initial condition is the reduced system density
 matrix generated from the correlated joint equilibrium state of the system and
-bath. In other words, if you call `meic.solve(...)` without `initial_state=`,
-the package builds the paper's correlated-equilibrium initial state from
-`SystemParams`, `BathParams`, and the initial-state quadrature controls in
-`NumericsConfig`.
+bath. In other words, `meic.solve(...)` builds the paper's
+correlated-equilibrium initial state from `SystemParams`, `BathParams`, and the
+initial-state quadrature controls in `NumericsConfig`.
 
 The `correlations` argument then chooses which dynamical branch is run:
 
@@ -125,19 +129,12 @@ The `correlations` argument then chooses which dynamical branch is run:
 - `correlations="without"` runs the corresponding uncorrelated comparison
   branch.
 
-Advanced users may pass a custom reduced system density matrix:
-
-```python
-dim = system.N + 1
-rho0 = np.eye(dim, dtype=complex) / dim
-
-result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], initial_state=rho0)
-```
-
-The custom `initial_state` must be a Hermitian, positive semidefinite,
-trace-one matrix with shape `(N + 1, N + 1)`. It overrides the reduced system
-state written to the numerical backend; it is not a complete custom joint
-system-bath density operator.
+The public master-equation solver intentionally does not accept a custom
+`initial_state` yet. A custom reduced density matrix alone would not specify
+the joint system-bath correlations used by the `correlations="with"` branch,
+so accepting it here would be physically ambiguous. This keeps the public
+workflow tied to the paper preparation map rather than presenting a half-custom
+joint state.
 
 ## Bath And Spectrum
 
@@ -155,6 +152,20 @@ system-bath density operator.
 The package validates these choices before generating coefficient tables or
 running Fortran, so invalid spectra fail with physical error messages rather
 than low-level numerical errors.
+
+The implemented spectral weight is the power-law exponential-cutoff form
+
+```text
+J_s(omega) proportional to coupling * omega^s * omega_c^(1-s) * exp(-omega / omega_c).
+```
+
+The `coupling` parameter multiplies the generated kernels in the numerical
+backend. Arbitrary user-defined spectral functions are not supported yet.
+
+For the paper-parity sub-Ohmic case `s=0.5`, the dissipative kernel uses the
+same legacy analytic branch as the published code, and the generated `C.dat`
+coefficient table preserves the extra cutoff convention used by the
+Mathematica/Fortran workflow.
 
 ## Observables
 
@@ -174,6 +185,9 @@ jz = J_z / J
 ```
 
 The expression `jx^2` uses the paper normalization `4 <J_x^2> / N^2`.
+Custom matrix observables must use the same dimensionless convention. For
+example, pass `J_x / J`, not the physical matrix `J_x`, if you want the same
+normalization as the string observable `"jx"`.
 Non-Hermitian observables are allowed, but the solver warns because complex
 expectation values may appear.
 
@@ -190,20 +204,29 @@ result.times
 result.expect
 result.e_data
 result.states
+result.as_dict()
 ```
 
 No output folder is written unless you ask for one:
 
 ```python
 result.save("my-run")
+```
+
+Normal solver calls clean temporary backend staging folders before returning.
+If you want generated coefficient, bath-correlation, initial-state,
+observable, Fortran-source, and log files for provenance, request them
+explicitly:
+
+```python
+result = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], keep_artifacts=True)
 result.save("my-run-with-artifacts", include_artifacts=True)
 result.close()
 ```
 
-`include_artifacts=True` exports generated coefficient, bath-correlation,
-initial-state, observable, Fortran-source, and log files when they are still
-available. If artifacts have been cleaned up or were never produced, the export
-fails loudly rather than silently writing an incomplete folder.
+`result.close()` is only needed for this advanced artifact-retention workflow.
+If `save_density=True`, `result.states` contains the reconstructed reduced
+system density matrices in the public collective-spin basis.
 
 ## Numerics
 
@@ -230,10 +253,11 @@ correlation tables are generated inside that window. Advanced users can also
 set separate cutoffs such as `correlation_omega_max`,
 `initial_state_omega_max`, or initial-state quadrature nodes.
 
-Fortran-backed solvers currently require a one-dimensional, strictly
-increasing, uniformly spaced `tlist` starting at `0.0`. The first returned
-Fortran time is a tiny positive value (`1e-11`), and `result.times` records the
-solver output without relabeling it.
+Public solvers currently require a one-dimensional, strictly increasing,
+uniformly spaced `tlist` starting at `0.0`. The analytical exact solver follows
+the same public grid contract for consistency. For Fortran-backed
+master-equation runs, the first returned time is a tiny positive value
+(`1e-11`), and `result.times` records the solver output without relabeling it.
 
 ## Examples And Paper Parameters
 
@@ -251,8 +275,9 @@ This script uses matplotlib outside the solver. If you want to run it, install
 matplotlib in your environment; it is not a core package dependency.
 
 Paper-parameter scripts live in `paper-plots/`. They compute arrays for the
-published parameter sets using the same public API. They do not generate plots
-or ship rendered image assets.
+published parameter sets using the same public API. Each script pins the paper
+numerical settings explicitly and is written like a notebook cell: run it,
+inspect the arrays, and plot or save however you prefer.
 
 ## Citation
 

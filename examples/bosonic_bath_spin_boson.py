@@ -4,6 +4,9 @@ import master_equation_initial_correlations as meic
 
 system = meic.SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
 bath = meic.BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
+
+# Quick demo numerics keep this script fast. For production calculations,
+# check convergence by increasing these quadrature controls.
 numerics = meic.NumericsConfig(
     omega_nodes=48,
     omega_max=80.0,

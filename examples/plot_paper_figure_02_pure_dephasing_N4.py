@@ -1,13 +1,6 @@
 import numpy as np
 import master_equation_initial_correlations as meic
-
-try:
-    import matplotlib.pyplot as plt
-except ModuleNotFoundError as exc:
-    raise SystemExit(
-        "This plotting example needs matplotlib. Install it in your environment "
-        "with `python -m pip install matplotlib`, then run the script again."
-    ) from exc
+import matplotlib.pyplot as plt
 
 
 system = meic.SystemParams(N=4, epsilon0=4.0, epsilon=4.0, delta0=0.0, delta=0.0)
@@ -22,11 +15,21 @@ bath = meic.BathParams(
 
 tlist = np.linspace(0.0, 5.0, 51)
 e_ops = ["jx"]
+paper_numerics = meic.NumericsConfig(
+    omega_max=500.0,
+    omega_nodes=500,
+    lambda_nodes=100,
+    initial_state_omega_nodes=260,
+    initial_state_lambda_nodes=40,
+    initial_state_zeta_nodes=40,
+    coefficient_time_step=0.0025,
+    correlation_tau_step=0.0025,
+)
 
 exact_wc = meic.exact.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="with")
 exact_woc = meic.exact.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="without")
-me_wc = meic.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="with")
-me_woc = meic.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="without")
+me_wc = meic.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="with", numerics=paper_numerics)
+me_woc = meic.solve(system, bath, tlist=tlist, e_ops=e_ops, correlations="without", numerics=paper_numerics)
 
 fig, ax = plt.subplots(figsize=(6.0, 4.2))
 ax.plot(me_wc.times, me_wc.e_data["jx"], color="black", linewidth=2.0, label="ME with correlations")
@@ -59,11 +62,4 @@ ax.set_ylabel(r"$j_x$")
 ax.set_title("Pure dephasing benchmark, N=4")
 ax.legend(frameon=False)
 fig.tight_layout()
-
-me_wc.close()
-me_woc.close()
-
-if "agg" in plt.get_backend().lower():
-    fig.canvas.draw()
-else:
-    plt.show()
+plt.show()

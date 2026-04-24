@@ -1,4 +1,5 @@
 from pathlib import Path
+import importlib.util
 import inspect
 import json
 
@@ -202,20 +203,40 @@ def test_result_save_is_explicit_and_headered(tmp_path: Path) -> None:
     assert "initial_state_source: analytical_correlated_or_uncorrelated_pure_dephasing_construction" in saved_jx
     metadata = json.loads((destination / "result_metadata.json").read_text())
     assert metadata["observables"] == ["jx", "jz"]
+    assert set(metadata["parameters_by_observable"]) == {"jx", "jz"}
+    assert "multiple observables" in metadata["parameters"]["note"]
     assert metadata["metadata"]["initial_state"]["custom_initial_state_supported"] is False
+    assert result.as_dict()["expect"]["jx"].shape == result.times.shape
+    if importlib.util.find_spec("pandas") is None:
+        with pytest.raises(ImportError, match="requires pandas"):
+            result.to_dataframe()
+    else:
+        assert result.to_dataframe().columns.tolist() == ["t", "jx", "jz"]
     with pytest.raises(FileExistsError):
         result.save(destination)
-    with pytest.raises(FileNotFoundError, match="no artifact directories"):
+    with pytest.raises(FileNotFoundError, match="no retained artifacts"):
         result.save(tmp_path / "no-artifacts", include_artifacts=True)
 
 
 def test_blackbox_tlist_validation() -> None:
     system = SystemParams(N=1, epsilon=4.0)
     bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
-    with pytest.raises(ValueError, match="start at 0.0"):
+    with pytest.raises(ValueError, match="start at 0.0") as start_error:
         meic.exact.solve(system, bath, tlist=np.linspace(0.1, 1.0, 5))
-    with pytest.raises(ValueError, match="uniformly spaced"):
+    assert "exact analytical pure-dephasing solver" in str(start_error.value)
+    assert "Fortran-backed" not in str(start_error.value)
+    with pytest.raises(ValueError, match="uniformly spaced") as spacing_error:
         meic.exact.solve(system, bath, tlist=np.array([0.0, 0.1, 0.3]))
+    assert "exact analytical pure-dephasing solver" in str(spacing_error.value)
+    assert "Fortran-backed" not in str(spacing_error.value)
+
+
+def test_public_master_equation_rejects_custom_initial_state() -> None:
+    system = SystemParams(N=2, epsilon0=4.0, epsilon=2.5, delta0=0.5, delta=0.5)
+    bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0)
+    rho0 = np.eye(3, dtype=complex) / 3.0
+    with pytest.raises(ValueError, match="custom initial_state is not supported"):
+        meic.solve(system, bath, tlist=np.linspace(0.0, 0.1, 2), e_ops=["jx"], initial_state=rho0)
 
 
 def test_bath_params_are_keyword_only() -> None:
@@ -290,23 +311,51 @@ def test_blackbox_fortran_solver_returns_arrays_and_saves_artifacts(tmp_path: Pa
     bath = BathParams(bath_type="bosonic", kind="ohmic", s=1.0, beta=1.0, coupling=0.05, omega_c=5.0)
     tlist = np.linspace(0.0, 0.05, 6)
 
-    wc = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="with", numerics=FAST_NUMERICS, verbose=False)
+    wc = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="with", numerics=FAST_NUMERICS, save_density=True, verbose=False)
     woc = meic.solve(system, bath, tlist=tlist, e_ops=["jx"], correlations="without", numerics=FAST_NUMERICS, verbose=False)
 
     assert wc.times[0] == pytest.approx(1.0e-11)
     assert wc.times[1:].tolist() == pytest.approx(tlist[1:].tolist())
     assert wc.expect[0].shape == tlist.shape
+    assert wc.states is not None
+    assert wc.states.shape == (tlist.size, system.N + 1, system.N + 1)
+    np.testing.assert_allclose(np.trace(wc.states, axis1=1, axis2=2), 1.0, atol=1.0e-8)
+    np.testing.assert_allclose(wc.states, wc.states.conj().transpose(0, 2, 1), atol=1.0e-8)
+    jx_from_states = np.asarray([np.trace(meic.jx(system) @ rho) for rho in wc.states])
+    np.testing.assert_allclose(jx_from_states.real, wc.e_data["jx"], atol=1.0e-8)
     assert wc.metadata["initial_state"]["source"] == "generated_from_correlated_joint_system_bath_equilibrium"
     assert wc.metadata["initial_state"]["shape"] == [3, 3]
     assert woc.branch == "without_correlations"
+    assert wc.artifact_dirs == {}
+    with pytest.raises(FileNotFoundError, match="keep_artifacts=True"):
+        wc.save(tmp_path / "no-default-artifacts", include_artifacts=True)
     assert not any(tmp_path.iterdir())
 
-    saved = wc.save(tmp_path / "saved-fortran", include_artifacts=True)
+    wc_with_artifacts = meic.solve(
+        system,
+        bath,
+        tlist=tlist,
+        e_ops=["jx"],
+        correlations="with",
+        numerics=FAST_NUMERICS,
+        keep_artifacts=True,
+        verbose=False,
+    )
+    saved = wc_with_artifacts.save(tmp_path / "saved-fortran", include_artifacts=True)
     assert (saved / "expect-jx.dat").exists()
     assert (saved / "artifacts" / "jx" / "A.dat").exists()
-    wc.close()
-    with pytest.raises(FileNotFoundError, match="artifact directories are unavailable"):
-        wc.save(tmp_path / "after-close", include_artifacts=True)
+    wc_with_artifacts.close()
+    with pytest.raises(FileNotFoundError, match="keep_artifacts=True"):
+        wc_with_artifacts.save(tmp_path / "after-close", include_artifacts=True)
+
+
+def test_paper_plot_scripts_are_notebook_style_and_syntax_valid() -> None:
+    root = Path(__file__).resolve().parents[1] / "paper-plots"
+    for script in sorted(root.glob("figure_*.py")):
+        source = script.read_text()
+        compile(source, str(script), "exec")
+        assert "def main" not in source
+        assert ".close()" not in source
 
 
 @pytest.mark.solver_rerun

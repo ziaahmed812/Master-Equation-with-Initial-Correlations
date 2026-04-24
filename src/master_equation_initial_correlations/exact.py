@@ -23,7 +23,8 @@ def solve(
     This solver is Python-only and is valid for the bosonic Ohmic
     pure-dephasing limit with ``delta0=0`` and ``delta=0``.
     It uses the analytical correlated or uncorrelated state construction and
-    does not accept a custom ``initial_state``.
+    does not accept a custom ``initial_state``. The public API currently keeps
+    the same uniform ``tlist`` contract as the master-equation solver.
     """
 
     branch = normalize_correlations(correlations)

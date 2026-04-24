@@ -27,7 +27,7 @@ from ._validation import (
 Branch = str
 
 
-def _validate_tlist(tlist: Any) -> tuple[np.ndarray, float, float]:
+def _validate_tlist(tlist: Any, *, solver_description: str) -> tuple[np.ndarray, float, float]:
     times = np.asarray(tlist, dtype=float)
     if times.ndim != 1:
         raise ValueError("tlist must be a one-dimensional array of times.")
@@ -36,13 +36,13 @@ def _validate_tlist(tlist: Any) -> tuple[np.ndarray, float, float]:
     if not np.all(np.isfinite(times)):
         raise ValueError("tlist must contain only finite values.")
     if abs(times[0]) > 1.0e-12:
-        raise ValueError("tlist must start at 0.0 for the Fortran-backed master-equation solver.")
+        raise ValueError(f"tlist must start at 0.0 for the {solver_description}.")
     steps = np.diff(times)
     if np.any(steps <= 0):
         raise ValueError("tlist must be strictly increasing.")
     dt = float(steps[0])
     if not np.allclose(steps, dt, rtol=1.0e-9, atol=1.0e-12):
-        raise ValueError("tlist must be uniformly spaced in v1; use np.linspace or np.arange from 0.0.")
+        raise ValueError(f"tlist must be uniformly spaced for the {solver_description}; use np.linspace or np.arange from 0.0.")
     return times, dt, float(times[-1])
 
 
@@ -102,6 +102,22 @@ def _read_expectation_table(path: Path, times: np.ndarray) -> tuple[np.ndarray, 
             return table[:, 0], values.real
         return table[:, 0], values
     raise RuntimeError(f"unexpected observable table shape {table.shape} in {path}.")
+
+
+def _read_density_table(path: Path, times: np.ndarray, *, dim: int) -> np.ndarray:
+    table = np.loadtxt(path, dtype=float, comments="#")
+    if table.ndim == 1:
+        table = table.reshape(1, -1)
+    expected_columns = 1 + 2 * dim * dim
+    if table.shape != (times.size, expected_columns):
+        raise RuntimeError(
+            f"unexpected density table shape {table.shape} in {path}; "
+            f"expected {(times.size, expected_columns)}."
+        )
+    if not np.allclose(table[:, 0], times, rtol=1.0e-8, atol=1.0e-10):
+        raise RuntimeError(f"density table times do not match tlist for {path}.")
+    pairs = table[:, 1:].reshape(times.size, dim * dim, 2)
+    return (pairs[:, :, 0] + 1j * pairs[:, :, 1]).reshape(times.size, dim, dim)
 
 
 def _simulation_params(
@@ -169,7 +185,7 @@ class _BasePureDephasingBranchSolver:
     branch: ClassVar[Branch] = "with_correlations"
 
     def run(self, tlist: Any, e_ops: Any = None, *, store_states: bool = False, verbose: bool = True) -> Result:
-        times, _, _ = _validate_tlist(tlist)
+        times, _, _ = _validate_tlist(tlist, solver_description="exact analytical pure-dephasing solver")
         observables, labels, label_index = _normalize_e_ops(self.observable if e_ops is None else e_ops)
         system = validate_system_params(self.system)
         bath = validate_bath_params(self.bath)
@@ -199,6 +215,7 @@ class _BasePureDephasingBranchSolver:
                     "custom_initial_state_supported": False,
                 },
                 "observables": labels,
+                "observable_parameters": [params for _ in observables],
             },
         )
 
@@ -232,15 +249,17 @@ class _BaseFortranBranchSolver:
         *,
         numerics: NumericsConfig | None = None,
         save_density: bool = False,
+        keep_artifacts: bool = False,
         verbose: bool = True,
     ) -> Result:
-        times, dt, t_final = _validate_tlist(tlist)
+        times, dt, t_final = _validate_tlist(tlist, solver_description="Fortran-backed master-equation solver")
         effective_numerics = _numerics_from_tlist(numerics or self.numerics, dt=dt, t_final=t_final)
         observables, labels, label_index = _normalize_e_ops(self.observable if e_ops is None else e_ops)
         expect: list[np.ndarray] = []
         artifacts: dict[str, Path] = {}
         temporary_directories: list[tempfile.TemporaryDirectory[str]] = []
         raw_times: np.ndarray | None = None
+        states: np.ndarray | None = None
         system = validate_system_params(self.system)
         bath = validate_bath_params(self.bath, bath_type=self.bath_type)
         validate_model_compatibility(system=system, bath=bath, model=self.model)
@@ -259,6 +278,7 @@ class _BaseFortranBranchSolver:
                 initial_state=self.initial_state,
             )
             backend_branch = "correlated" if self.branch == "with_correlations" else "uncorrelated"
+            public_key = "correlated" if backend_branch == "correlated" else "uncorrelated"
             result = run_parameterized_fortran_branch(
                 params,
                 output_dir,
@@ -277,6 +297,12 @@ class _BaseFortranBranchSolver:
             elif not np.allclose(raw_times, table_times, rtol=0.0, atol=1.0e-14):
                 raise RuntimeError(f"{self.__class__.__name__} returned inconsistent time grids across observables.")
             expect.append(values)
+            if save_density and states is None:
+                density_key = f"density_{public_key}"
+                density_path = result.output_files.get(density_key) if result.output_files else None
+                if density_path is None:
+                    raise RuntimeError(f"{self.__class__.__name__} did not produce a density table.")
+                states = _read_density_table(density_path, table_times, dim=system.N + 1)
             artifacts[label] = result.output_dir
 
         e_data = {label: expect[index] for label, index in label_index.items()}
@@ -288,17 +314,17 @@ class _BaseFortranBranchSolver:
             observable=observables[0],
             initial_state=self.initial_state,
         )
-        return Result(
+        result = Result(
             times=raw_times if raw_times is not None else times,
             expect=expect,
             e_data=e_data,
-            states=None,
+            states=states,
             params=params,
             branch=self.branch,
             solver=self.__class__.__name__,
             e_ops=labels,
             numerics=effective_numerics,
-            artifact_dirs=artifacts,
+            artifact_dirs=artifacts if keep_artifacts else {},
             _temporary_directories=temporary_directories,
             metadata={
                 "system": system,
@@ -330,6 +356,9 @@ class _BaseFortranBranchSolver:
                 ],
             },
         )
+        if not keep_artifacts:
+            result.close()
+        return result
 
 
 @dataclass(frozen=True)
@@ -371,18 +400,26 @@ def solve(
     numerics: NumericsConfig | None = None,
     initial_state: np.ndarray | None = None,
     save_density: bool = False,
+    keep_artifacts: bool = False,
     verbose: bool = True,
 ) -> Result:
     """Run the master-equation solver from explicit physical inputs.
 
     The public form is ``solve(system, bath, tlist=..., e_ops=...)``.
-    If ``initial_state`` is not supplied, the solver generates the reduced
-    system density matrix from the correlated joint system-bath equilibrium
-    state determined by ``system`` and ``bath``. A supplied ``initial_state``
-    must be a reduced system density matrix; it does not define a full custom
-    joint system-bath state.
+    The public master-equation workflow generates the reduced system density
+    matrix from the correlated joint system-bath equilibrium state determined
+    by ``system`` and ``bath``. Custom reduced initial states are intentionally
+    not accepted in this public black-box API yet, because they would not
+    define a complete custom joint system-bath state. Temporary Fortran
+    staging folders are cleaned before return unless ``keep_artifacts=True``.
     """
 
+    if initial_state is not None:
+        raise ValueError(
+            "meic.solve currently uses the generated reduced state from the "
+            "joint equilibrium preparation; custom initial_state is not "
+            "supported in the public master-equation API."
+        )
     if not isinstance(bath, BathParams):
         raise TypeError("solve(system, bath, ...) requires bath to be a BathParams instance.")
     normalized_bath = validate_bath_params(bath)
@@ -408,7 +445,14 @@ def solve(
         initial_state=initial_state,
         numerics=numerics,
     )
-    return solver.run(tlist, e_ops=e_ops, numerics=numerics, save_density=save_density, verbose=verbose)
+    return solver.run(
+        tlist,
+        e_ops=e_ops,
+        numerics=numerics,
+        save_density=save_density,
+        keep_artifacts=keep_artifacts,
+        verbose=verbose,
+    )
 
 
 def _operator(system_or_n: SystemParams | int, expression: str) -> np.ndarray:

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from master_equation_initial_correlations._resources import asset
 from master_equation_initial_correlations.generated_inputs import (
@@ -87,6 +88,27 @@ def test_generated_superohmic_correlation_table_has_nu_and_eta_columns() -> None
     table = generate_bath_correlation_tau(params)
     assert table.shape == (2001, 2)
     assert np.all(np.isfinite(table[:20]))
+
+
+def test_generated_initial_state_fails_loudly_when_quadrature_is_unphysical() -> None:
+    params = SimulationParams(
+        bath="bosonic",
+        model="spin-boson",
+        spectral="superohmic",
+        observable="jx",
+        N=2,
+        s=3.0,
+    )
+    numerics = QuadratureConfig(
+        omega_nodes=2,
+        omega_max=5.0,
+        lambda_nodes=2,
+        initial_state_omega_nodes=2,
+        initial_state_lambda_nodes=2,
+        initial_state_zeta_nodes=2,
+    )
+    with pytest.raises(ValueError, match="generated initial_state"):
+        generate_initial_state(params, numerics)
 
 
 def test_user_supplied_initial_state_is_written_as_complex_fortran_input(tmp_path: Path) -> None:

@@ -363,6 +363,35 @@ def validate_initial_state(initial_state: np.ndarray, params: SimulationParams) 
     return matrix
 
 
+def _validate_generated_initial_state(initial_state: np.ndarray, params: SimulationParams) -> np.ndarray:
+    matrix = np.asarray(initial_state, dtype=complex)
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("generated initial_state contains non-finite values.")
+    hermiticity_defect = float(np.max(np.abs(matrix - matrix.conj().T)))
+    if hermiticity_defect > 5.0e-5:
+        raise ValueError(
+            "generated initial_state is not Hermitian within numerical tolerance "
+            f"(defect={hermiticity_defect:.3g}); increase initial-state quadrature controls "
+            "or check the requested parameter regime."
+        )
+    matrix = 0.5 * (matrix + matrix.conj().T)
+    trace = np.trace(matrix)
+    if abs(trace.imag) > 1.0e-10 or trace.real <= 0.0:
+        raise ValueError(
+            "generated initial_state has an invalid trace; increase initial-state "
+            "quadrature controls or check the requested parameter regime."
+        )
+    matrix = matrix / trace.real
+    eigenvalues = np.linalg.eigvalsh(matrix)
+    if float(np.min(eigenvalues)) < -1.0e-10:
+        raise ValueError(
+            "generated initial_state is not positive semidefinite within numerical tolerance "
+            f"(minimum eigenvalue={float(np.min(eigenvalues)):.3g}); increase initial-state "
+            "quadrature controls or check the requested parameter regime."
+        )
+    return matrix
+
+
 def generate_initial_state(params: SimulationParams, quadrature: QuadratureConfig = DEFAULT_NUMERICS) -> np.ndarray:
     if params.initial_state is not None:
         return validate_initial_state(params.initial_state, params)
@@ -407,7 +436,7 @@ def generate_initial_state(params: SimulationParams, quadrature: QuadratureConfi
     rho_prime = beta_matrix + identity
     rho = rho_s0_run @ rho_prime
     final_state = rho / np.trace(rho)
-    return final_state
+    return _validate_generated_initial_state(final_state, params)
 
 
 def generate_inputs(params: SimulationParams, quadrature: QuadratureConfig = DEFAULT_NUMERICS) -> GeneratedInputs:

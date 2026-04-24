@@ -4,6 +4,11 @@ These scripts are written like notebook cells. They define parameters, define
 `tlist`, choose observables, call `meic.solve(...)` or `meic.exact.solve(...)`,
 and inspect in-memory arrays.
 
+The short Fortran-backed examples use quick demo numerics so they finish fast.
+For scientific production runs, increase the quadrature controls and check
+convergence. Temporary backend staging folders are cleaned automatically for
+ordinary RAM-first runs.
+
 The Fortran-backed examples require `gfortran` plus BLAS/LAPACK:
 
 ```bash
